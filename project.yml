@@ -28,6 +28,7 @@ targets:
       properties:
         CFBundleDisplayName: Doseify
         NSHealthShareUsageDescription: "Doseify can import your existing medications from Apple Health so you don't have to re-enter them."
+        NSHealthUpdateUsageDescription: "Doseify only reads your medication list from Apple Health to import it; it does not write any information back to Health."
         NSLocationWhenInUseUsageDescription: "Doseify uses your location only to confirm timezone changes when you travel. Your location is never stored."
         ITSAppUsesNonExemptEncryption: false
         UIBackgroundModes:
