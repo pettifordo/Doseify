@@ -1,0 +1,1526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Doseify — Timezone Shift Test Harness v1.1</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --ink: #1d1d1f;
+    --muted: #6e6e73;
+    --line: #e5e5e7;
+    --accent: #0a84ff;
+    --warn-bg: #fff5f6;
+    --warn-line: #d70015;
+    --info-bg: #f0f8ff;
+    --info-line: #007aff;
+    --home: #f7f7f8;
+    --pre: #fff8e1;
+    --flight: #ffe9d4;
+    --dest: #e3f2fd;
+    --return: #ffe9d4;
+    --recover: #fff8e1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.4;
+  }
+  header.app {
+    background: var(--ink); color: #fff; padding: 14px 24px;
+  }
+  header.app h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  header.app .sub { font-size: 12px; color: #aaa; margin-top: 2px; }
+  nav.tabs {
+    background: #fff; border-bottom: 1px solid var(--line); padding: 0 24px;
+    display: flex; gap: 4px; overflow-x: auto;
+  }
+  nav.tabs button {
+    background: none; border: none; padding: 12px 14px; cursor: pointer;
+    font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent;
+  }
+  nav.tabs button.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 500; }
+  main { padding: 20px 24px 80px; max-width: 1280px; }
+  section.tab-pane { display: none; }
+  section.tab-pane.active { display: block; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+  .panel h3 { margin: 14px 0 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--muted); }
+  .field input, .field select {
+    padding: 6px 8px; font-size: 13px; border: 1px solid #d2d2d7; border-radius: 5px; background: #fff;
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button.primary {
+    background: var(--ink); color: #fff; border: none; padding: 9px 18px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;
+  }
+  button.primary:hover { background: #333; }
+  button.secondary {
+    background: #fff; color: var(--ink); border: 1px solid #d2d2d7;
+    padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  }
+  button.secondary:hover { background: #f5f5f7; }
+  button.danger {
+    background: #fff; color: var(--warn-line); border: 1px solid #f5c7ca;
+    padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
+  }
+  table.schedule { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.schedule th, table.schedule td { border-bottom: 1px solid #f0f0f0; padding: 6px 8px; text-align: left; }
+  table.schedule th { background: #fafafa; font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; position: sticky; top: 0; }
+  table.schedule tr.phase-home td:first-child { border-left: 3px solid #d2d2d7; }
+  table.schedule tr.phase-pre td:first-child { border-left: 3px solid #f5a623; }
+  table.schedule tr.phase-flight td:first-child { border-left: 3px solid #ff6b00; }
+  table.schedule tr.phase-dest td:first-child { border-left: 3px solid var(--accent); }
+  table.schedule tr.phase-return td:first-child { border-left: 3px solid #ff6b00; }
+  table.schedule tr.phase-recover td:first-child { border-left: 3px solid #f5a623; }
+  .pill { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 10px; background: #eef; color: #334; margin-right: 4px; font-weight: 500; }
+  .pill.home { background: #eee; color: #555; }
+  .pill.pre, .pill.recover { background: #fff3cd; color: #7a5500; }
+  .pill.flight, .pill.return { background: #ffe0c2; color: #8a3a00; }
+  .pill.dest { background: #d6ebff; color: #003a72; }
+  .warning-list { font-size: 12px; }
+  .warning-list .warn { padding: 7px 10px; border-left: 3px solid var(--warn-line); background: var(--warn-bg); margin-bottom: 4px; border-radius: 0 4px 4px 0; }
+  .warning-list .info { padding: 7px 10px; border-left: 3px solid var(--info-line); background: var(--info-bg); margin-bottom: 4px; border-radius: 0 4px 4px 0; }
+  .med-row {
+    display: flex; gap: 8px; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .med-row:last-child { border-bottom: none; }
+  .med-row input[type=text] { width: 140px; }
+  .med-row input[type=number] { width: 60px; }
+  .med-row .med-times { display: flex; gap: 4px; align-items: center; }
+  svg.timeline { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; }
+  .legend { font-size: 11px; color: var(--muted); display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+  .legend .swatch { display: inline-block; width: 12px; height: 12px; vertical-align: middle; margin-right: 4px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.05); }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .saved-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; gap: 12px; }
+  .saved-row:last-child { border-bottom: none; }
+  .saved-row .saved-meta { flex: 1; }
+  .saved-row .saved-name { font-weight: 500; }
+  .saved-row .saved-desc { font-size: 11px; color: var(--muted); }
+  small.muted { color: var(--muted); font-size: 11px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 12px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; }
+  .scrollwrap { max-height: 460px; overflow: auto; border: 1px solid #f0f0f0; border-radius: 4px; }
+  details.about { padding: 10px 0; border-top: 1px solid #eee; }
+  details.about summary { cursor: pointer; font-weight: 500; padding: 4px 0; }
+  details.about > div { padding: 8px 0 4px; color: #333; }
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; background: var(--ink); color: #fff;
+    padding: 10px 16px; border-radius: 6px; font-size: 12px; opacity: 0; transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header class="app">
+  <h1>Doseify — Timezone Shift Test Harness <small style="color:#888;font-weight:400">v1.1</small></h1>
+  <div class="sub">Local playground for the medication time-shifting algorithm. Everything runs in your browser; nothing is sent anywhere.</div>
+</header>
+<nav class="tabs">
+  <button data-tab="scenario" class="active">Scenario</button>
+  <button data-tab="output">Engine output</button>
+  <button data-tab="compare">Compare strategies</button>
+  <button data-tab="saved">Saved scenarios</button>
+  <button data-tab="about">About &amp; assumptions</button>
+</nav>
+<main>
+
+<!-- ===================== SCENARIO TAB ===================== -->
+<section class="tab-pane active" id="tab-scenario">
+
+  <div class="panel">
+    <h2>Trip</h2>
+    <div class="row">
+      <div class="field">
+        <label>Home city</label>
+        <select id="homeCity"></select>
+      </div>
+      <div class="field">
+        <label>Home offset (h from UTC)</label>
+        <input type="number" id="homeOffset" step="0.25" value="1">
+      </div>
+      <div class="field">
+        <label>Destination city</label>
+        <select id="destCity"></select>
+      </div>
+      <div class="field">
+        <label>Dest offset (h from UTC)</label>
+        <input type="number" id="destOffset" step="0.25" value="9">
+      </div>
+    </div>
+
+    <h3>Outbound flight</h3>
+    <div class="row">
+      <div class="field">
+        <label>Departure date (home local)</label>
+        <input type="date" id="depDate" value="2026-07-06">
+      </div>
+      <div class="field">
+        <label>Departure time (home local)</label>
+        <input type="time" id="depTime" value="08:00">
+      </div>
+      <div class="field">
+        <label>Flight duration (hours)</label>
+        <input type="number" id="depFlight" step="0.5" value="15">
+      </div>
+    </div>
+
+    <h3>Return flight</h3>
+    <div class="row">
+      <div class="field">
+        <label>Return date (destination local)</label>
+        <input type="date" id="retDate" value="2026-07-16">
+      </div>
+      <div class="field">
+        <label>Return time (destination local)</label>
+        <input type="time" id="retTime" value="10:00">
+      </div>
+      <div class="field">
+        <label>Return flight duration (hours)</label>
+        <input type="number" id="retFlight" step="0.5" value="15">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Medications <button class="secondary" id="addMed" style="float:right">+ Add medication</button></h2>
+    <div id="medList"></div>
+    <small class="muted">Times are in home-local clock (the times you'd take them at home). Min/max interval define warnings — e.g., a daily med with min=20h flags any pair of doses closer than 20h.</small>
+  </div>
+
+  <div class="panel">
+    <h2>Strategy</h2>
+    <div class="row">
+      <div class="field">
+        <label>Shift strategy</label>
+        <select id="strategy">
+          <option value="suggest">Suggest (engine picks)</option>
+          <option value="snap">Snap on landing</option>
+          <option value="gradual" selected>Gradual pre-shift</option>
+          <option value="split">Split (half before, half on landing)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Pre-shift window (days)</label>
+        <input type="number" id="preShiftDays" min="0" max="14" value="5">
+      </div>
+      <div class="field">
+        <label>Shift per day (minutes)</label>
+        <input type="number" id="shiftMinPerDay" min="0" max="240" step="5" value="30">
+        <small class="muted">Used for gradual / split. 0 = engine derives from window. Every dose-time move is exactly this size.</small>
+      </div>
+      <div class="field">
+        <label>Shift direction</label>
+        <select id="shiftDirection">
+          <option value="delay" selected>Delay (clock later each day)</option>
+          <option value="advance">Advance (clock earlier each day)</option>
+        </select>
+        <small class="muted">Most people find "delay" easier (stay up later). "Advance" matches the physiologically-direct path for eastward travel.</small>
+      </div>
+      <div class="field">
+        <label>Recovery days after return</label>
+        <input type="number" id="postRecoveryDays" min="0" max="14" value="3">
+      </div>
+    </div>
+    <h3>Safety constraints</h3>
+    <div class="row">
+      <div class="field">
+        <label>Sleep window start (local hour)</label>
+        <input type="number" id="sleepStart" min="0" max="23" value="23">
+      </div>
+      <div class="field">
+        <label>Sleep window end (local hour)</label>
+        <input type="number" id="sleepEnd" min="0" max="23" value="7">
+      </div>
+      <div class="field">
+        <label>Warn on sleep-window doses</label>
+        <select id="warnSleep"><option value="1" selected>Yes</option><option value="0">No</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="primary" id="computeBtn">Compute schedule →</button>
+    <button class="secondary" id="saveBtn">Save current scenario…</button>
+    <button class="secondary" id="resetBtn">Reset to Tokyo example</button>
+  </div>
+</section>
+
+<!-- ===================== OUTPUT TAB ===================== -->
+<section class="tab-pane" id="tab-output">
+  <div class="panel">
+    <h2>Summary <span style="float:right">
+      <button class="secondary" id="exportJsonBtn">Export JSON fixture</button>
+    </span></h2>
+    <dl class="kv" id="summaryKv"></dl>
+  </div>
+
+  <div class="panel">
+    <h2>Your edits <small class="muted">(drag any dose dot on the timeline to override its time)</small></h2>
+    <div id="editsPanel"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Timeline</h2>
+    <div id="timelineWrap"></div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--home)"></span>Home</span>
+      <span><span class="swatch" style="background:var(--pre)"></span>Pre-shift</span>
+      <span><span class="swatch" style="background:#ff6b00;opacity:0.4"></span>In flight</span>
+      <span><span class="swatch" style="background:var(--dest)"></span>Destination</span>
+      <span><span class="swatch" style="background:var(--recover)"></span>Recovery</span>
+      <span><span class="swatch" style="background:#666;opacity:0.3"></span>Sleep window</span>
+      <span><span class="swatch" style="background:#1d1d1f;border-radius:50%"></span>Dose</span>
+      <span><span class="swatch" style="background:#fff;border:2px solid #d70015;border-radius:50%"></span>Dose in a warning</span>
+      <span><span class="swatch" style="background:#0a84ff;border-radius:50%"></span>Edited dose</span>
+      <span style="font-style:italic;color:#777">Dashed vertical line = where "home midnight" falls on this row's clock</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Schedule (per dose)</h2>
+    <div class="scrollwrap">
+      <table class="schedule" id="schedTable">
+        <thead><tr>
+          <th>Phase</th>
+          <th>Date (display)</th>
+          <th>Med</th>
+          <th>Display local</th>
+          <th>Home local</th>
+          <th>UTC</th>
+          <th>Notes</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Warnings &amp; notes</h2>
+    <div class="warning-list" id="warningList"></div>
+  </div>
+</section>
+
+<!-- ===================== COMPARE TAB ===================== -->
+<section class="tab-pane" id="tab-compare">
+  <div class="panel">
+    <h2>Compare two strategies</h2>
+    <div class="row">
+      <div class="field">
+        <label>Strategy A</label>
+        <select id="cmpA">
+          <option value="snap">Snap on landing</option>
+          <option value="gradual" selected>Gradual pre-shift</option>
+          <option value="split">Split</option>
+          <option value="suggest">Suggest</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Strategy B</label>
+        <select id="cmpB">
+          <option value="snap" selected>Snap on landing</option>
+          <option value="gradual">Gradual pre-shift</option>
+          <option value="split">Split</option>
+          <option value="suggest">Suggest</option>
+        </select>
+      </div>
+      <button class="primary" id="cmpBtn">Compare →</button>
+    </div>
+    <small class="muted">Uses the current trip + medication + safety-constraint settings from the Scenario tab. Only the strategy differs.</small>
+  </div>
+
+  <div class="compare-grid">
+    <div class="panel">
+      <h2>Strategy A</h2>
+      <div id="cmpAOut"></div>
+    </div>
+    <div class="panel">
+      <h2>Strategy B</h2>
+      <div id="cmpBOut"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SAVED TAB ===================== -->
+<section class="tab-pane" id="tab-saved">
+  <div class="panel">
+    <h2>Saved scenarios <small class="muted">(stored in this browser only)</small></h2>
+    <div id="savedList"></div>
+  </div>
+  <div class="panel">
+    <h2>Import / export</h2>
+    <p style="font-size:12px;color:var(--muted)">Export all saved scenarios as JSON (for backup or to seed Swift unit tests). Import overwrites.</p>
+    <button class="secondary" id="exportAllBtn">Export all scenarios</button>
+    <button class="secondary" id="importAllBtn">Import scenarios…</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+  </div>
+</section>
+
+<!-- ===================== ABOUT TAB ===================== -->
+<section class="tab-pane" id="tab-about">
+  <div class="panel">
+    <h2>What this harness is for</h2>
+    <p>This is a self-contained playground for the Doseify time-shift engine. The goal is to get the algorithm right <em>before</em> porting it to Swift inside the iOS app. Each scenario you save becomes a regression test fixture: once we port to Swift, the Swift engine should produce the same dose schedule for the same inputs.</p>
+
+    <h3>What the engine does</h3>
+    <p>Given (home timezone, destination timezone, flight dates, medication schedule, strategy), it produces a day-by-day list of dose times in both UTC and local clocks. It also flags warnings: doses too close together, too far apart, or falling in the configured sleep window.</p>
+
+    <h3>Strategies</h3>
+    <details class="about"><summary>Snap on landing</summary><div>
+      Take doses at the home-local clock times right up until landing, then immediately take them at the destination-local clock times. Simplest. Best for small shifts (≤3h) or short trips (≤3 days). For large shifts, produces an awkward "swap" dose where two adjacent doses are much closer or further apart than usual.
+    </div></details>
+    <details class="about"><summary>Gradual pre-shift</summary><div>
+      Move doses by N minutes per day for K days before departure (configurable). On landing, snap any remaining shift to destination-local time. On return, mirror: pre-shift back over K days before the return flight, snap remainder on landing back home.
+    </div></details>
+    <details class="about"><summary>Split (half before, half on landing)</summary><div>
+      Pre-shift only half the total shift before departure, then snap the remaining half on landing. Useful when you can't start pre-shifting early enough to cover the full shift gradually.
+    </div></details>
+    <details class="about"><summary>Suggest</summary><div>
+      Engine picks: snap if |shift| ≤ 3h or trip ≤ 3 days; gradual otherwise, with shift-per-day = ceil(total shift / pre-shift window).
+    </div></details>
+
+    <h3>Assumptions and limitations (be honest about these)</h3>
+    <ul>
+      <li><strong>Fixed offsets, no DST mid-trip.</strong> The harness uses constant UTC offsets per zone. If DST changes during the trip, results will be off by an hour. Real implementation needs IANA zones.</li>
+      <li><strong>No drug pharmacokinetics.</strong> "Safe interval" here is a single min/max per medication. Real drug safety depends on half-life, peak times, food interactions, etc. The harness is geometric, not clinical.</li>
+      <li><strong>Strategy choice is not medical advice.</strong> Which strategy is appropriate depends on the medication and the prescriber. The harness shows you what happens; it does not tell you what should happen.</li>
+      <li><strong>Single-leg flights only.</strong> No layovers, multi-stop trips, or partial-day arrivals that change zone mid-flight.</li>
+    </ul>
+
+    <h3>Engine public shape (this is what we'll port to Swift)</h3>
+    <pre style="font-size:11px;background:#f5f5f7;padding:10px;border-radius:4px;overflow:auto"><code>computeSchedule({
+  homeOffset, destOffset,         // hours from UTC
+  departureLocal: {date, time},   // home local
+  flightHours,
+  returnLocal: {date, time},      // dest local
+  returnFlightHours,
+  meds: [{ name, homeTimes:['08:00','20:00'],
+           minIntervalH, maxIntervalH }],
+  strategy: 'snap'|'gradual'|'split'|'suggest',
+  preShiftDays, shiftMinPerDay,
+  postRecoveryDays,
+  sleepWindow: [startHour, endHour]
+}) =&gt; {
+  doses: [{ medName, utcMs, homeLocal, destLocal,
+            displayLocal, displayOffset, phase,
+            scheduledClockMin, shiftFraction, notes }],
+  warnings: [{ severity, code, message, dosesAffected }],
+  summary: { shiftHours, totalDoses, ... }
+}</code></pre>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CITY / OFFSET DATA
+// ============================================================
+const CITIES = [
+  ['London', 1],          // BST assumed in default scenario
+  ['New York', -4],       // EDT
+  ['Los Angeles', -7],    // PDT
+  ['Tokyo', 9],
+  ['Sydney', 10],
+  ['Singapore', 8],
+  ['Mumbai', 5.5],
+  ['Kathmandu', 5.75],
+  ['Dubai', 4],
+  ['Paris', 2],
+  ['Berlin', 2],
+  ['Moscow', 3],
+  ['Honolulu', -10],
+  ['Auckland', 12],
+  ['São Paulo', -3],
+  ['Cape Town', 2],
+  ['Buenos Aires', -3],
+  ['Mexico City', -6],
+  ['Chicago', -5],
+  ['Vancouver', -7],
+  ['Hong Kong', 8],
+  ['Seoul', 9],
+  ['Bangkok', 7],
+  ['Anchorage', -8],
+  ['Reykjavík', 0],
+  ['(custom)', null]
+];
+
+// ============================================================
+// ENGINE — pure logic, no DOM, designed to port to Swift
+// ============================================================
+const MS = { hour: 3600000, day: 86400000, min: 60000 };
+
+function parseLocalToUtc(dateStr, timeStr, offsetHours) {
+  // dateStr: 'YYYY-MM-DD'; timeStr: 'HH:MM'; returns ms since epoch
+  const [Y,M,D] = dateStr.split('-').map(Number);
+  const [h,m] = timeStr.split(':').map(Number);
+  return Date.UTC(Y, M-1, D, h, m) - offsetHours * MS.hour;
+}
+
+function fmtLocal(utcMs, offsetHours) {
+  const d = new Date(utcMs + offsetHours * MS.hour);
+  const Y = d.getUTCFullYear();
+  const M = String(d.getUTCMonth()+1).padStart(2,'0');
+  const D = String(d.getUTCDate()).padStart(2,'0');
+  const h = String(d.getUTCHours()).padStart(2,'0');
+  const m = String(d.getUTCMinutes()).padStart(2,'0');
+  return { date: `${Y}-${M}-${D}`, time: `${h}:${m}`, hourFloat: d.getUTCHours() + d.getUTCMinutes()/60 };
+}
+
+function fmtUtc(utcMs) {
+  return fmtLocal(utcMs, 0);
+}
+
+function timeStrToMin(t) {
+  const [h,m] = t.split(':').map(Number);
+  return h*60 + m;
+}
+
+function minToTimeStr(min) {
+  const m = ((min % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+// Compute the dose "shift fraction" at UTC time t.
+// 0 = aligned with home, 1 = aligned with destination.
+function shiftFractionAt(t, mile, strategy, preShiftDays, shiftMinPerDay, shiftHours) {
+  const { depUtc, arrUtc, retDepUtc, retArrUtc } = mile;
+  const psMs = preShiftDays * MS.day;
+  const totalShiftMin = Math.abs(shiftHours) * 60;
+  // Effective pre-shift window — never larger than what we can fill at shiftMinPerDay
+  const effPsMs = (strategy === 'gradual' && shiftMinPerDay > 0)
+    ? Math.min(psMs, (totalShiftMin / shiftMinPerDay) * MS.day)
+    : psMs;
+
+  // Before everything: 0
+  if (t < depUtc - effPsMs) return 0;
+
+  // Outbound shift region
+  if (t < arrUtc) {
+    if (strategy === 'snap') return 0;
+    if (strategy === 'gradual') {
+      if (t < depUtc) {
+        const f = (t - (depUtc - effPsMs)) / Math.max(effPsMs, 1);
+        return Math.max(0, Math.min(1, f));
+      }
+      // On flight day after departure: hold whatever we'd reached at departure
+      const fAtDep = effPsMs > 0 ? 1 : 0; // gradual fully shifts by departure
+      return fAtDep;
+    }
+    if (strategy === 'split') {
+      if (t < depUtc) {
+        const f = 0.5 * (t - (depUtc - effPsMs)) / Math.max(effPsMs, 1);
+        return Math.max(0, Math.min(0.5, f));
+      }
+      return 0.5;
+    }
+  }
+
+  // In destination, before return shift starts
+  if (t < retDepUtc - effPsMs) return 1;
+
+  // Return shift region
+  if (t < retArrUtc) {
+    if (strategy === 'snap') return 1;
+    if (strategy === 'gradual') {
+      if (t < retDepUtc) {
+        const f = 1 - (t - (retDepUtc - effPsMs)) / Math.max(effPsMs, 1);
+        return Math.max(0, Math.min(1, f));
+      }
+      return 0;
+    }
+    if (strategy === 'split') {
+      if (t < retDepUtc) {
+        const f = 1 - 0.5 * (t - (retDepUtc - effPsMs)) / Math.max(effPsMs, 1);
+        return Math.max(0.5, Math.min(1, f));
+      }
+      return 0.5;
+    }
+  }
+  // After return: home
+  return 0;
+}
+
+function effectiveOffsetAt(t, mile, strategy, preShiftDays, shiftMinPerDay, homeOffset, destOffset) {
+  const shift = destOffset - homeOffset;
+  const f = shiftFractionAt(t, mile, strategy, preShiftDays, shiftMinPerDay, shift);
+  return homeOffset + f * shift;
+}
+
+function phaseAt(t, mile) {
+  const { depUtc, arrUtc, retDepUtc, retArrUtc, preShiftStart, recoveryEnd } = mile;
+  if (t < preShiftStart) return 'home';
+  if (t < depUtc) return 'pre';
+  if (t < arrUtc) return 'flight';
+  if (t < retDepUtc) return 'dest';
+  if (t < retArrUtc) return 'return';
+  if (t < recoveryEnd) return 'recover';
+  return 'home';
+}
+
+function displayOffsetForPhase(phase, homeOffset, destOffset) {
+  // Where the person physically is — used for "display local" column
+  if (phase === 'home' || phase === 'pre' || phase === 'recover') return homeOffset;
+  if (phase === 'dest') return destOffset;
+  if (phase === 'flight' || phase === 'return') return destOffset; // arrival side
+  return homeOffset;
+}
+
+// Midnight (UTC ms) of the calendar day in a given frame (offset hours).
+function startOfDayInFrame(utcMs, offsetHours) {
+  const localMs = utcMs + offsetHours * MS.hour;
+  const dayStartLocal = Math.floor(localMs / MS.day) * MS.day;
+  return dayStartLocal - offsetHours * MS.hour;
+}
+
+// Generate doses for one medication using DISCRETE per-day shifts.
+// Every step is exactly `shiftMinPerDay` minutes, so dose clock-times always
+// land on a clean multiple of the step size (no drift to "random" minutes).
+function generateMedDoses(med, range, mile, strategy, preShiftDays, shiftMinPerDay, homeOffset, destOffset, shiftDirection) {
+  const doses = [];
+  const slotsMin = med.homeTimes.map(timeStrToMin).sort((a,b)=>a-b);
+  if (slotsMin.length === 0) return doses;
+
+  const shiftHours = destOffset - homeOffset;
+  const absShiftMin = Math.abs(shiftHours) * 60;
+  // dir: +1 = delay (clock later each day), -1 = advance (clock earlier each day)
+  const dir = shiftDirection === 'delay' ? +1 : -1;
+  const stepMin = Math.max(1, shiftMinPerDay);
+
+  // How far can pre-shift accumulate? Strategy-dependent cap, in minutes.
+  const fullCap = preShiftDays * stepMin;
+  let outCap, retCap;
+  if (strategy === 'snap') { outCap = 0; retCap = 0; }
+  else if (strategy === 'gradual') { outCap = fullCap; retCap = fullCap; }
+  else if (strategy === 'split') { outCap = Math.floor(fullCap / 2); retCap = outCap; }
+  else { outCap = fullCap; retCap = fullCap; }
+
+  // Helper to emit a dose if it lies inside the visible range.
+  const emitDose = (doseUtc, slot, accShift) => {
+    if (doseUtc < range.startUtc || doseUtc >= range.endUtc) return;
+    const phase = phaseAt(doseUtc, mile);
+    const dispOff = displayOffsetForPhase(phase, homeOffset, destOffset);
+    const homeLoc = fmtLocal(doseUtc, homeOffset);
+    const destLoc = fmtLocal(doseUtc, destOffset);
+    const dispLoc = fmtLocal(doseUtc, dispOff);
+    doses.push({
+      medName: med.name,
+      utcMs: doseUtc,
+      homeLocal: `${homeLoc.date} ${homeLoc.time}`,
+      destLocal: `${destLoc.date} ${destLoc.time}`,
+      displayLocal: `${dispLoc.date} ${dispLoc.time}`,
+      displayDate: dispLoc.date,
+      displayHourFloat: dispLoc.hourFloat,
+      displayOffset: dispOff,
+      phase,
+      scheduledClockMin: slot,
+      scheduledClock: minToTimeStr(slot),
+      accShiftMin: accShift,
+      shiftFraction: absShiftMin > 0 ? Math.min(1, accShift / absShiftMin) : 0,
+      notes: []
+    });
+  };
+
+  // ===== Phase 1: outbound days (home + pre-shift) =====
+  // Iterated in HOME frame. Day d=0 is the departure date; d<0 is days before.
+  const depMid = startOfDayInFrame(mile.depUtc, homeOffset);
+  const daysBefore = Math.max(preShiftDays + 2, 7);
+  for (let d = -daysBefore; d <= 0; d++) {
+    const dayMid = depMid + d * MS.day;
+    const daysIntoShift = preShiftDays + d; // 0..preShiftDays during the window, negative before
+    const accShift = Math.max(0, Math.min(outCap, daysIntoShift * stepMin));
+    for (const slot of slotsMin) {
+      const shiftedSlot = slot + accShift * dir;
+      const doseUtc = dayMid + shiftedSlot * MS.min;
+      // Only emit doses that occur before arrival; the dest-frame loop covers everything after.
+      if (doseUtc < mile.arrUtc) emitDose(doseUtc, slot, accShift);
+    }
+  }
+
+  // ===== Phase 2: dest days (settled + return pre-shift) =====
+  // Iterated in DEST frame. i=0 is the arrival date; the last iteration is the return-flight date.
+  const arrMid = startOfDayInFrame(mile.arrUtc, destOffset);
+  const retMid = startOfDayInFrame(mile.retDepUtc, destOffset);
+  const destDayCount = Math.round((retMid - arrMid) / MS.day) + 1;
+  for (let i = 0; i < destDayCount; i++) {
+    const dayMid = arrMid + i * MS.day;
+    const dFromRet = i - (destDayCount - 1); // -(destDayCount-1) .. 0
+    const daysIntoReturn = preShiftDays + dFromRet;
+    const accReturnShift = Math.max(0, Math.min(retCap, daysIntoReturn * stepMin));
+    // In dest frame the schedule shifts back the OPPOSITE direction from outbound.
+    for (const slot of slotsMin) {
+      const shiftedSlot = slot + accReturnShift * (-dir);
+      const doseUtc = dayMid + shiftedSlot * MS.min;
+      if (doseUtc >= mile.arrUtc && doseUtc < mile.retArrUtc) emitDose(doseUtc, slot, accReturnShift);
+    }
+  }
+
+  // ===== Phase 3: post-return (recover + home) =====
+  // Iterated in HOME frame, starting from the day of return-landing.
+  const retArrMid = startOfDayInFrame(mile.retArrUtc, homeOffset);
+  const daysAfter = Math.max(7, Math.ceil((range.endUtc - retArrMid) / MS.day) + 2);
+  for (let d = 0; d <= daysAfter; d++) {
+    const dayMid = retArrMid + d * MS.day;
+    for (const slot of slotsMin) {
+      const doseUtc = dayMid + slot * MS.min;
+      if (doseUtc >= mile.retArrUtc) emitDose(doseUtc, slot, 0);
+    }
+  }
+
+  // Dedupe — phase boundaries can occasionally emit two doses within minutes of each other.
+  doses.sort((a,b) => a.utcMs - b.utcMs);
+  const out = [];
+  for (const d of doses) {
+    if (out.length > 0 && Math.abs(d.utcMs - out[out.length-1].utcMs) < MS.min * 5) continue;
+    out.push(d);
+  }
+  return out;
+}
+
+function computeWarnings(doses, meds, sleepWindow, warnSleep) {
+  const warnings = [];
+  // Group doses by med to check intervals
+  const byMed = {};
+  for (const d of doses) {
+    if (!byMed[d.medName]) byMed[d.medName] = [];
+    byMed[d.medName].push(d);
+  }
+  for (const med of meds) {
+    const list = (byMed[med.name] || []).slice().sort((a,b)=>a.utcMs - b.utcMs);
+    for (let i = 1; i < list.length; i++) {
+      const dt = (list[i].utcMs - list[i-1].utcMs) / MS.hour;
+      if (med.minIntervalH > 0 && dt < med.minIntervalH - 0.001) {
+        warnings.push({
+          severity: 'warn',
+          code: 'INTERVAL_TOO_SHORT',
+          message: `${med.name}: only ${dt.toFixed(1)}h between dose at ${list[i-1].displayLocal} and ${list[i].displayLocal} (min ${med.minIntervalH}h)`,
+          dosesAffected: [list[i-1].utcMs, list[i].utcMs]
+        });
+      }
+      if (med.maxIntervalH > 0 && dt > med.maxIntervalH + 0.001) {
+        warnings.push({
+          severity: 'warn',
+          code: 'INTERVAL_TOO_LONG',
+          message: `${med.name}: ${dt.toFixed(1)}h gap between dose at ${list[i-1].displayLocal} and ${list[i].displayLocal} (max ${med.maxIntervalH}h)`,
+          dosesAffected: [list[i-1].utcMs, list[i].utcMs]
+        });
+      }
+    }
+  }
+  if (warnSleep) {
+    for (const d of doses) {
+      const h = d.displayHourFloat;
+      const [s, e] = sleepWindow;
+      const inWindow = s < e ? (h >= s && h < e) : (h >= s || h < e);
+      if (inWindow) {
+        warnings.push({
+          severity: 'info',
+          code: 'SLEEP_WINDOW',
+          message: `${d.medName}: dose at ${d.displayLocal} falls in sleep window (${String(s).padStart(2,'0')}:00–${String(e).padStart(2,'0')}:00 local)`,
+          dosesAffected: [d.utcMs]
+        });
+      }
+      if (d.phase === 'flight' || d.phase === 'return') {
+        warnings.push({
+          severity: 'info',
+          code: 'IN_FLIGHT',
+          message: `${d.medName}: dose at ${d.displayLocal} is during the flight`,
+          dosesAffected: [d.utcMs]
+        });
+      }
+    }
+  }
+  return warnings;
+}
+
+function pickStrategy(input) {
+  // Used when strategy='suggest'
+  const shift = Math.abs(input.destOffset - input.homeOffset);
+  const tripDays = (input.returnDepartureUtc - input.arrivalUtc) / MS.day;
+  if (shift <= 3) return 'snap';
+  if (tripDays <= 3) return 'snap';
+  return 'gradual';
+}
+
+function computeSchedule(rawInput) {
+  // Normalize
+  const homeOffset = +rawInput.homeOffset;
+  const destOffset = +rawInput.destOffset;
+  const depUtc = parseLocalToUtc(rawInput.departureLocal.date, rawInput.departureLocal.time, homeOffset);
+  const arrUtc = depUtc + rawInput.flightHours * MS.hour;
+  const retDepUtc = parseLocalToUtc(rawInput.returnLocal.date, rawInput.returnLocal.time, destOffset);
+  const retArrUtc = retDepUtc + rawInput.returnFlightHours * MS.hour;
+  const preShiftDays = +rawInput.preShiftDays;
+  const postRecoveryDays = +rawInput.postRecoveryDays;
+  const shiftDirection = rawInput.shiftDirection || 'delay';
+  const recoveryEnd = retArrUtc + postRecoveryDays * MS.day;
+
+  let strategy = rawInput.strategy;
+  if (strategy === 'suggest') {
+    strategy = pickStrategy({ homeOffset, destOffset, arrivalUtc: arrUtc, returnDepartureUtc: retDepUtc });
+  }
+
+  // Effective pre-shift days (0 for snap so phases label correctly).
+  const effPreShiftDays = strategy === 'snap' ? 0 : preShiftDays;
+  const preShiftStart = depUtc - effPreShiftDays * MS.day;
+  const startUtc = preShiftStart - MS.day; // show one extra day before
+  const endUtc = recoveryEnd + MS.day;
+  const mile = { depUtc, arrUtc, retDepUtc, retArrUtc, preShiftStart, recoveryEnd };
+
+  // Auto-derive shiftMinPerDay if 0 and gradual/split (round to nearest 5 min for cleanliness).
+  let shiftMinPerDay = +rawInput.shiftMinPerDay;
+  const shiftHours = destOffset - homeOffset;
+  if ((strategy === 'gradual' || strategy === 'split') && shiftMinPerDay === 0 && preShiftDays > 0) {
+    shiftMinPerDay = Math.ceil(Math.abs(shiftHours) * 60 / preShiftDays / 5) * 5;
+  }
+
+  const range = { startUtc, endUtc };
+  let allDoses = [];
+  for (const med of rawInput.meds) {
+    const ds = generateMedDoses(med, range, mile, strategy, preShiftDays, shiftMinPerDay, homeOffset, destOffset, shiftDirection);
+    allDoses = allDoses.concat(ds);
+  }
+  allDoses.sort((a,b) => a.utcMs - b.utcMs);
+
+  const warnings = computeWarnings(allDoses, rawInput.meds,
+    [rawInput.sleepStart, rawInput.sleepEnd], rawInput.warnSleep);
+
+  // Summary
+  const summary = {
+    strategyUsed: strategy,
+    shiftDirectionUsed: shiftDirection,
+    shiftMinPerDayUsed: shiftMinPerDay,
+    shiftHours: shiftHours,
+    preShiftDays,
+    totalDoses: allDoses.length,
+    warningCount: warnings.filter(w => w.severity === 'warn').length,
+    infoCount: warnings.filter(w => w.severity === 'info').length,
+    depUtcIso: new Date(depUtc).toISOString(),
+    arrUtcIso: new Date(arrUtc).toISOString(),
+    retDepUtcIso: new Date(retDepUtc).toISOString(),
+    retArrUtcIso: new Date(retArrUtc).toISOString(),
+  };
+  return { doses: allDoses, warnings, summary, milestones: mile, range };
+}
+
+// ============================================================
+// UI
+// ============================================================
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ============================================================
+// USER OVERRIDES — drag-to-edit dose times
+// ============================================================
+// Keyed by (medName | displayDate | scheduledClockMin) so they survive recomputes
+// as long as the dose's slot identity is stable.
+let userOverrides = {};
+let lastResult = null;
+let lastInput = null;
+
+function overrideKey(d) {
+  return `${d.medName}|${d.displayDate}|${d.scheduledClockMin}`;
+}
+
+function applyOverrides(doses, homeOff, destOff) {
+  return doses.map((d, idx) => {
+    const annotated = { ...d, _idx: idx };
+    annotated._overrideKey = overrideKey(d);
+    const ov = userOverrides[annotated._overrideKey];
+    if (!ov) return annotated;
+    const newUtc = ov.newUtcMs;
+    const dispOff = annotated.displayOffset;
+    const homeLoc = fmtLocal(newUtc, homeOff);
+    const destLoc = fmtLocal(newUtc, destOff);
+    const dispLoc = fmtLocal(newUtc, dispOff);
+    return {
+      ...annotated,
+      utcMs: newUtc,
+      homeLocal: `${homeLoc.date} ${homeLoc.time}`,
+      destLocal: `${destLoc.date} ${destLoc.time}`,
+      displayLocal: `${dispLoc.date} ${dispLoc.time}`,
+      displayDate: dispLoc.date,
+      displayHourFloat: dispLoc.hourFloat,
+      overridden: true
+    };
+  });
+}
+
+function rerenderWithOverrides() {
+  if (!lastResult) return;
+  const homeOff = +lastInput.homeOffset;
+  const destOff = +lastInput.destOffset;
+  let doses = applyOverrides(lastResult.doses, homeOff, destOff);
+  doses.sort((a,b) => a.utcMs - b.utcMs);
+  const warnings = computeWarnings(doses, lastInput.meds,
+    [lastInput.sleepStart, lastInput.sleepEnd], lastInput.warnSleep);
+  const summary = {
+    ...lastResult.summary,
+    totalDoses: doses.length,
+    warningCount: warnings.filter(w => w.severity === 'warn').length,
+    infoCount: warnings.filter(w => w.severity === 'info').length,
+    editsCount: Object.keys(userOverrides).length
+  };
+  const result = { ...lastResult, doses, warnings, summary };
+  renderOutput(result, lastInput);
+  renderEditsPanel();
+  attachTimelineDrag(result, lastInput);
+}
+
+function renderEditsPanel() {
+  const wrap = $('#editsPanel');
+  const keys = Object.keys(userOverrides);
+  if (keys.length === 0) {
+    wrap.innerHTML = '<div style="color:#999;font-size:12px">No edits yet — drag any dose dot left or right on the timeline to override its time. Snaps to 30-min boundaries.</div>';
+    return;
+  }
+  const homeOff = +lastInput.homeOffset;
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <strong>${keys.length} edit${keys.length>1?'s':''}</strong>
+      <button class="secondary" id="resetEditsBtn">Reset all edits</button>
+    </div>
+    ${keys.map(k => {
+      const [med, date, slot] = k.split('|');
+      const ov = userOverrides[k];
+      const dispOff = ov.displayOffset != null ? ov.displayOffset : homeOff;
+      const newLoc = fmtLocal(ov.newUtcMs, dispOff);
+      const offStr = `UTC${dispOff>=0?'+':''}${dispOff}`;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #f0f0f0;font-size:12px">
+        <div style="flex:1"><strong>${med}</strong> · ${date} · slot ${minToTimeStr(+slot)} → <strong>${newLoc.time}</strong> <small class="muted">(${offStr})</small></div>
+        <button class="danger" data-undo="${k}" title="Undo this edit">×</button>
+      </div>`;
+    }).join('')}
+  `;
+  $('#resetEditsBtn').onclick = () => { userOverrides = {}; rerenderWithOverrides(); toast('Edits reset'); };
+  wrap.querySelectorAll('button[data-undo]').forEach(b => {
+    b.onclick = e => { delete userOverrides[e.currentTarget.dataset.undo]; rerenderWithOverrides(); };
+  });
+}
+
+function attachTimelineDrag(result, input) {
+  const svg = $('#timelineWrap svg');
+  if (!svg) return;
+  const labelW = +svg.dataset.labelW;
+  const trackW = +svg.dataset.trackW;
+  let drag = null;
+
+  const pxToHour = (clientX) => {
+    const rect = svg.getBoundingClientRect();
+    const vbW = svg.viewBox.baseVal.width;
+    const svgX = (clientX - rect.left) * (vbW / rect.width);
+    return (svgX - labelW) / trackW * 24;
+  };
+  const snapHour = h => Math.max(0, Math.min(23.5, Math.round(h * 2) / 2));
+
+  svg.querySelectorAll('circle.dose-hit').forEach(hit => {
+    hit.addEventListener('mousedown', e => {
+      const idx = +hit.dataset.idx;
+      const dose = result.doses[idx];
+      if (!dose) return;
+      drag = {
+        dose,
+        hitEl: hit,
+        dotEl: hit.nextElementSibling, // visible dose dot
+        startCx: +hit.getAttribute('cx'),
+        startClientX: e.clientX
+      };
+      svg.style.userSelect = 'none';
+      e.preventDefault();
+    });
+  });
+
+  const onMove = e => {
+    if (!drag) return;
+    const newHour = snapHour(pxToHour(e.clientX));
+    const newCx = labelW + (newHour / 24) * trackW;
+    drag.hitEl.setAttribute('cx', newCx);
+    if (drag.dotEl) drag.dotEl.setAttribute('cx', newCx);
+    // Move the time label and med abbrev next to the dot if they exist
+    const sibTime = drag.dotEl ? drag.dotEl.nextElementSibling : null;
+    if (sibTime && sibTime.tagName === 'text') sibTime.setAttribute('x', newCx);
+    const sibTime2 = sibTime ? sibTime.nextElementSibling : null;
+    if (sibTime2 && sibTime2.tagName === 'text') {
+      sibTime2.setAttribute('x', newCx);
+      const hh = Math.floor(newHour);
+      const mm = Math.round((newHour - hh) * 60);
+      sibTime2.textContent = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    }
+  };
+  const onUp = e => {
+    if (!drag) return;
+    const newHour = snapHour(pxToHour(e.clientX));
+    const hh = Math.floor(newHour);
+    const mm = Math.round((newHour - hh) * 60);
+    const timeStr = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    const dose = drag.dose;
+    const newUtcMs = parseLocalToUtc(dose.displayDate, timeStr, dose.displayOffset);
+    if (Math.abs(newUtcMs - dose.utcMs) > 30000) {
+      userOverrides[dose._overrideKey] = {
+        newUtcMs,
+        displayOffset: dose.displayOffset,
+        originalUtcMs: dose.utcMs
+      };
+      rerenderWithOverrides();
+    } else {
+      // No real change — just re-render to reset positions
+      rerenderWithOverrides();
+    }
+    drag = null;
+    svg.style.userSelect = '';
+  };
+  // Detach previous drag listeners (if any) before attaching new ones so they don't pile up.
+  if (window.__doseifyDragMove) window.removeEventListener('mousemove', window.__doseifyDragMove);
+  if (window.__doseifyDragUp) window.removeEventListener('mouseup', window.__doseifyDragUp);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  window.__doseifyDragMove = onMove;
+  window.__doseifyDragUp = onUp;
+}
+
+function populateCities() {
+  for (const sel of [$('#homeCity'), $('#destCity')]) {
+    sel.innerHTML = '';
+    for (const [name, off] of CITIES) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = off === null ? name : `${name} (UTC${off >= 0 ? '+' : ''}${off})`;
+      sel.appendChild(opt);
+    }
+  }
+  $('#homeCity').value = 'London';
+  $('#destCity').value = 'Tokyo';
+}
+
+function onCityChange(which) {
+  const cityName = $(`#${which}City`).value;
+  const found = CITIES.find(([n]) => n === cityName);
+  if (found && found[1] !== null) {
+    $(`#${which}Offset`).value = found[1];
+  }
+}
+
+// Medications UI
+let medsState = [];
+function renderMeds() {
+  const wrap = $('#medList');
+  wrap.innerHTML = '';
+  medsState.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'med-row';
+    row.innerHTML = `
+      <div class="field"><label>Name</label><input type="text" data-i="${i}" data-f="name" value="${m.name}"></div>
+      <div class="field"><label>Times (home local, comma-sep)</label><input type="text" data-i="${i}" data-f="homeTimes" value="${m.homeTimes.join(', ')}" style="width:200px"></div>
+      <div class="field"><label>Min interval (h)</label><input type="number" data-i="${i}" data-f="minIntervalH" value="${m.minIntervalH}"></div>
+      <div class="field"><label>Max interval (h)</label><input type="number" data-i="${i}" data-f="maxIntervalH" value="${m.maxIntervalH}"></div>
+      <button class="danger" data-del="${i}">Remove</button>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const i = +e.target.dataset.i;
+      const f = e.target.dataset.f;
+      if (f === 'homeTimes') {
+        medsState[i][f] = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (f === 'name') {
+        medsState[i][f] = e.target.value;
+      } else {
+        medsState[i][f] = +e.target.value;
+      }
+    });
+  });
+  wrap.querySelectorAll('button[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      medsState.splice(+e.target.dataset.del, 1);
+      renderMeds();
+    });
+  });
+}
+
+function readScenario() {
+  return {
+    homeCity: $('#homeCity').value,
+    destCity: $('#destCity').value,
+    homeOffset: +$('#homeOffset').value,
+    destOffset: +$('#destOffset').value,
+    departureLocal: { date: $('#depDate').value, time: $('#depTime').value },
+    flightHours: +$('#depFlight').value,
+    returnLocal: { date: $('#retDate').value, time: $('#retTime').value },
+    returnFlightHours: +$('#retFlight').value,
+    meds: medsState.map(m => ({...m})),
+    strategy: $('#strategy').value,
+    shiftDirection: $('#shiftDirection').value,
+    preShiftDays: +$('#preShiftDays').value,
+    shiftMinPerDay: +$('#shiftMinPerDay').value,
+    postRecoveryDays: +$('#postRecoveryDays').value,
+    sleepStart: +$('#sleepStart').value,
+    sleepEnd: +$('#sleepEnd').value,
+    warnSleep: +$('#warnSleep').value === 1,
+  };
+}
+
+function writeScenario(s) {
+  $('#homeCity').value = s.homeCity || 'London';
+  $('#destCity').value = s.destCity || 'Tokyo';
+  $('#homeOffset').value = s.homeOffset;
+  $('#destOffset').value = s.destOffset;
+  $('#depDate').value = s.departureLocal.date;
+  $('#depTime').value = s.departureLocal.time;
+  $('#depFlight').value = s.flightHours;
+  $('#retDate').value = s.returnLocal.date;
+  $('#retTime').value = s.returnLocal.time;
+  $('#retFlight').value = s.returnFlightHours;
+  $('#strategy').value = s.strategy;
+  $('#shiftDirection').value = s.shiftDirection || 'delay';
+  $('#preShiftDays').value = s.preShiftDays;
+  $('#shiftMinPerDay').value = s.shiftMinPerDay;
+  $('#postRecoveryDays').value = s.postRecoveryDays;
+  $('#sleepStart').value = s.sleepStart;
+  $('#sleepEnd').value = s.sleepEnd;
+  $('#warnSleep').value = s.warnSleep ? 1 : 0;
+  medsState = JSON.parse(JSON.stringify(s.meds));
+  renderMeds();
+}
+
+// Render output
+function renderOutput(result, input) {
+  // Summary
+  const kv = $('#summaryKv');
+  kv.innerHTML = `
+    <dt>Strategy used</dt><dd>${result.summary.strategyUsed}${input.strategy === 'suggest' ? ' (suggested)' : ''}</dd>
+    <dt>Direction</dt><dd>${result.summary.shiftDirectionUsed}</dd>
+    <dt>Shift size</dt><dd>${result.summary.shiftHours >= 0 ? '+' : ''}${result.summary.shiftHours}h (${result.summary.shiftHours >= 0 ? 'eastbound' : 'westbound'})</dd>
+    <dt>Shift per day</dt><dd>${result.summary.shiftMinPerDayUsed} min/day over ${result.summary.preShiftDays} days</dd>
+    <dt>Total doses</dt><dd>${result.summary.totalDoses}</dd>
+    <dt>Warnings</dt><dd>${result.summary.warningCount} warnings, ${result.summary.infoCount} info</dd>
+    <dt>Outbound</dt><dd>${result.summary.depUtcIso} → ${result.summary.arrUtcIso}</dd>
+    <dt>Return</dt><dd>${result.summary.retDepUtcIso} → ${result.summary.retArrUtcIso}</dd>
+  `;
+
+  // Schedule table
+  const tbody = $('#schedTable tbody');
+  tbody.innerHTML = '';
+  for (const d of result.doses) {
+    const tr = document.createElement('tr');
+    tr.className = `phase-${d.phase}`;
+    tr.innerHTML = `
+      <td><span class="pill ${d.phase}">${d.phase}</span></td>
+      <td>${d.displayDate}</td>
+      <td>${d.medName}</td>
+      <td>${d.displayLocal.split(' ')[1]} <small class="muted">(UTC${d.displayOffset>=0?'+':''}${d.displayOffset})</small></td>
+      <td>${d.homeLocal.split(' ')[1]}</td>
+      <td>${new Date(d.utcMs).toISOString().slice(11,16)}</td>
+      <td><small class="muted">scheduled ${d.scheduledClock}; shifted ${d.accShiftMin||0} min</small></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // Warnings
+  const wl = $('#warningList');
+  if (result.warnings.length === 0) {
+    wl.innerHTML = '<div class="info">No warnings.</div>';
+  } else {
+    wl.innerHTML = result.warnings.map(w =>
+      `<div class="${w.severity}"><strong>${w.code}</strong> — ${w.message}</div>`
+    ).join('');
+  }
+
+  // Timeline
+  $('#timelineWrap').innerHTML = renderTimeline(result, input);
+}
+
+// Timeline layout constants — shared between renderTimeline and drag handlers.
+const TL = { labelW: 130, trackW: 880, rowH: 44, headerH: 30 };
+
+function renderTimeline(result, input) {
+  const byDate = {};
+  for (const d of result.doses) {
+    if (!byDate[d.displayDate]) byDate[d.displayDate] = [];
+    byDate[d.displayDate].push(d);
+  }
+  const dates = Object.keys(byDate).sort();
+  if (dates.length === 0) return '<div style="padding:20px;color:#999">No doses computed.</div>';
+
+  const { labelW, trackW, rowH, headerH } = TL;
+  const totalH = dates.length * rowH + headerH + 20;
+  const sleepStart = input.sleepStart;
+  const sleepEnd = input.sleepEnd;
+  const homeOff = +input.homeOffset;
+  const destOff = +input.destOffset;
+  // Flight & return rows use a neutral background so the orange flight band is the only
+  // orange thing on those rows — makes "where the flight ends" visually unambiguous.
+  const phaseColor = {
+    home: 'var(--home)', pre: 'var(--pre)', flight: '#ffffff',
+    dest: 'var(--dest)', return: '#ffffff', recover: 'var(--recover)'
+  };
+  const xForHour = h => labelW + (h / 24) * trackW;
+
+  // Extra right padding so the cross-day flight bridge + shift badge don't get clipped.
+  const rightPad = 90;
+  let svg = `<svg class="timeline" viewBox="0 0 ${labelW + trackW + rightPad} ${totalH}" xmlns="http://www.w3.org/2000/svg" data-label-w="${labelW}" data-track-w="${trackW}" data-row-h="${rowH}" data-header-h="${headerH}">`;
+
+  // Hour grid — major every 6h, minor every 3h
+  for (let h = 0; h <= 24; h += 3) {
+    const x = xForHour(h);
+    const isMajor = h % 6 === 0;
+    svg += `<line x1="${x}" y1="${headerH - 4}" x2="${x}" y2="${totalH - 8}" stroke="${isMajor ? '#dcdcdc' : '#f0f0f0'}" stroke-dasharray="${isMajor ? '' : '2,2'}"/>`;
+    if (isMajor) svg += `<text x="${x}" y="${headerH - 12}" font-size="9" fill="#777" text-anchor="middle">${String(h).padStart(2, '0')}:00</text>`;
+  }
+  svg += `<text x="${labelW - 6}" y="${headerH - 12}" font-size="9" fill="#999" text-anchor="end">local time of day →</text>`;
+
+  // Pre-compute the set of dose UTC timestamps that are part of any 'warn' severity warning,
+  // so we can ring them in red on the timeline. Info-level findings (sleep window, in-flight) are NOT ringed.
+  const affectedWarn = new Set();
+  const affectedInfo = new Set();
+  result.warnings.forEach(w => {
+    if (!w.dosesAffected) return;
+    const set = w.severity === 'warn' ? affectedWarn : affectedInfo;
+    w.dosesAffected.forEach(u => set.add(u));
+  });
+
+  // Row metadata collected during the per-row pass so we can draw flight legs across rows afterwards.
+  const rowMeta = [];
+
+  dates.forEach((date, idx) => {
+    const y = headerH + idx * rowH;
+    const doses = byDate[date];
+    const phase = doses[0].phase;
+    const dispOff = doses[0].displayOffset;
+    const cy = y + (rowH - 4) / 2;
+    rowMeta.push({ date, y, cy, dispOff, phase });
+
+    // Background by phase
+    svg += `<rect x="${labelW}" y="${y}" width="${trackW}" height="${rowH - 4}" fill="${phaseColor[phase] || '#fff'}" stroke="#e8e8e8"/>`;
+
+    // Sleep shading
+    const drawSleep = (s, e) => {
+      const x1 = xForHour(s), x2 = xForHour(e);
+      if (x2 > x1) svg += `<rect x="${x1}" y="${y}" width="${x2 - x1}" height="${rowH - 4}" fill="#666" opacity="0.13"/>`;
+    };
+    if (sleepStart < sleepEnd) drawSleep(sleepStart, sleepEnd);
+    else { drawSleep(sleepStart, 24); drawSleep(0, sleepEnd); }
+
+    // Home-frame ghost: where "home midnight" and "home noon" fall on this row's local clock.
+    if (Math.abs(dispOff - homeOff) > 0.01) {
+      const hMidnight = ((homeOff - dispOff) % 24 + 24) % 24;
+      const hNoon = (hMidnight + 12) % 24;
+      const gx1 = xForHour(hMidnight);
+      const gx2 = xForHour(hNoon);
+      svg += `<line x1="${gx1}" y1="${y + 2}" x2="${gx1}" y2="${y + rowH - 6}" stroke="#666" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>`;
+      svg += `<text x="${gx1 + 3}" y="${y + 11}" font-size="8" fill="#666" font-style="italic">home 00:00</text>`;
+      svg += `<line x1="${gx2}" y1="${y + 2}" x2="${gx2}" y2="${y + rowH - 6}" stroke="#666" stroke-width="1" stroke-dasharray="1,4" opacity="0.4"/>`;
+      svg += `<text x="${gx2 + 3}" y="${y + 11}" font-size="8" fill="#666" font-style="italic">home 12:00</text>`;
+    }
+
+    // Row label: date (top line) + offset and phase(s) (bottom line). If the day contains
+    // multiple phases (e.g. flight → dest on a landing day) the label shows the transition.
+    const offStr = `UTC${dispOff >= 0 ? '+' : ''}${dispOff}`;
+    const uniquePhases = [...new Set(doses.map(d => d.phase))];
+    const phaseLabel = uniquePhases.join(' → ');
+    svg += `<text x="${labelW - 8}" y="${y + 15}" font-size="11" font-weight="600" text-anchor="end" fill="#1d1d1f">${date}</text>`;
+    svg += `<text x="${labelW - 8}" y="${y + 30}" font-size="9" text-anchor="end" fill="#777">${offStr} · ${phaseLabel}</text>`;
+
+    // Dose markers (draggable). Drawn here so they sit below the flight overlay drawn later.
+    doses.forEach((d) => {
+      const h = d.displayHourFloat;
+      const x = xForHour(h);
+      const isOver = !!d.overridden;
+      const isWarn = affectedWarn.has(d.utcMs);
+      const isInfo = affectedInfo.has(d.utcMs);
+      // Priority of indication: warning (red) > edit (blue) > info (faint amber)
+      const fill = isWarn ? '#d70015' : (isOver ? '#0a84ff' : '#1d1d1f');
+      if (isWarn) svg += `<circle cx="${x}" cy="${cy}" r="9" fill="none" stroke="#d70015" stroke-width="2" opacity="0.75"/>`;
+      else if (isOver) svg += `<circle cx="${x}" cy="${cy}" r="8" fill="none" stroke="#0a84ff" stroke-width="1.5" opacity="0.55"/>`;
+      else if (isInfo) svg += `<circle cx="${x}" cy="${cy}" r="8" fill="none" stroke="#b07000" stroke-width="1" stroke-dasharray="2,2" opacity="0.55"/>`;
+      // Hit target (invisible, larger) for easier dragging
+      svg += `<circle class="dose-hit" cx="${x}" cy="${cy}" r="11" fill="transparent" data-idx="${d._idx}" style="cursor:ew-resize"/>`;
+      svg += `<circle class="dose" cx="${x}" cy="${cy}" r="5" fill="${fill}" pointer-events="none"/>`;
+      svg += `<text x="${x}" y="${cy - 9}" font-size="8" fill="${fill}" text-anchor="middle" pointer-events="none">${d.medName.slice(0,5)}</text>`;
+      const timeStr = d.displayLocal.split(' ')[1];
+      svg += `<text x="${x}" y="${cy + 14}" font-size="8" fill="#444" text-anchor="middle" pointer-events="none">${timeStr}</text>`;
+    });
+  });
+
+  // ===== Flight legs — draw after rows so the band + connector sit on top =====
+  const drawFlightLeg = (legStartUtc, legEndUtc, legLabel) => {
+    // 1) Shade each row's portion of [legStartUtc, legEndUtc] in its display frame.
+    let takeoffRow = null, landingRow = null;
+    rowMeta.forEach(row => {
+      const rowStartUtc = parseLocalToUtc(row.date, '00:00', row.dispOff);
+      const rowEndUtc = rowStartUtc + 24 * MS.hour;
+      if (rowEndUtc <= legStartUtc || rowStartUtc >= legEndUtc) return;
+      const visStart = Math.max(legStartUtc, rowStartUtc);
+      const visEnd = Math.min(legEndUtc, rowEndUtc);
+      const startHour = (visStart - rowStartUtc) / MS.hour;
+      const endHour = (visEnd - rowStartUtc) / MS.hour;
+      const x1 = xForHour(startHour);
+      const x2 = xForHour(endHour);
+      // Flight band — diagonal hatch + solid fill so it's distinct from phase color
+      svg += `<rect x="${x1}" y="${row.y + 1}" width="${x2 - x1}" height="${rowH - 6}" fill="#ff6b00" opacity="0.22"/>`;
+      // Edge indicators when the band touches a row edge mid-flight
+      const continuesLeft = visStart > legStartUtc + 60000;
+      const continuesRight = visEnd < legEndUtc - 60000;
+      if (continuesLeft) {
+        svg += `<text x="${x1 + 3}" y="${row.y + 12}" font-size="9" fill="#a04500" font-weight="700">↪ from ${rowMeta[rowMeta.indexOf(row) - 1] ? rowMeta[rowMeta.indexOf(row) - 1].date : 'prev day'}</text>`;
+      }
+      if (continuesRight) {
+        svg += `<text x="${x2 - 3}" y="${row.y + rowH - 10}" font-size="9" fill="#a04500" font-weight="700" text-anchor="end">to ${rowMeta[rowMeta.indexOf(row) + 1] ? rowMeta[rowMeta.indexOf(row) + 1].date : 'next day'} ↪</text>`;
+      }
+      // Mark takeoff (if leg starts inside this row). When the row is NOT in home frame,
+      // we also show the home-local time so the user can anchor to "what time was it back home".
+      // The leg name (OUTBOUND / RETURN) is included here rather than as a separate badge.
+      if (legStartUtc >= rowStartUtc && legStartUtc < rowEndUtc) {
+        const tHour = (legStartUtc - rowStartUtc) / MS.hour;
+        const tX = xForHour(tHour);
+        const tClock = minToTimeStr(Math.round(tHour * 60));
+        const tHome = fmtLocal(legStartUtc, homeOff).time;
+        const sameFrame = Math.abs(row.dispOff - homeOff) < 0.01;
+        const boxH = sameFrame ? 14 : 24;
+        const boxW = sameFrame ? 150 : 150;
+        svg += `<line x1="${tX}" y1="${row.y - 2}" x2="${tX}" y2="${row.y + rowH - 4}" stroke="#ff6b00" stroke-width="2.5"/>`;
+        svg += `<rect x="${tX + 3}" y="${row.y + 1}" width="${boxW}" height="${boxH}" rx="3" fill="#ff6b00"/>`;
+        svg += `<text x="${tX + 7}" y="${row.y + 12}" font-size="9.5" fill="#fff" font-weight="700">✈ ${legLabel} TAKEOFF ${tClock}</text>`;
+        if (!sameFrame) svg += `<text x="${tX + 7}" y="${row.y + 22}" font-size="8" fill="#fff" opacity="0.95">= ${tHome} home</text>`;
+        takeoffRow = { row, x: tX };
+      }
+      // Mark landing (if leg ends inside this row). Same dual-clock treatment.
+      if (legEndUtc > rowStartUtc && legEndUtc <= rowEndUtc + 60000) {
+        const lHour = Math.min(24, (legEndUtc - rowStartUtc) / MS.hour);
+        const lX = xForHour(lHour);
+        const lClock = minToTimeStr(Math.round(lHour * 60));
+        const lHome = fmtLocal(legEndUtc, homeOff).time;
+        const sameFrame = Math.abs(row.dispOff - homeOff) < 0.01;
+        const boxH = sameFrame ? 14 : 24;
+        const boxW = sameFrame ? 150 : 150;
+        svg += `<line x1="${lX}" y1="${row.y - 2}" x2="${lX}" y2="${row.y + rowH - 4}" stroke="#ff6b00" stroke-width="2.5"/>`;
+        svg += `<rect x="${lX - boxW - 3}" y="${row.y + 1}" width="${boxW}" height="${boxH}" rx="3" fill="#ff6b00"/>`;
+        svg += `<text x="${lX - 7}" y="${row.y + 12}" font-size="9.5" fill="#fff" font-weight="700" text-anchor="end">🛬 ${legLabel} LANDING ${lClock}</text>`;
+        if (!sameFrame) svg += `<text x="${lX - 7}" y="${row.y + 22}" font-size="8" fill="#fff" opacity="0.95" text-anchor="end">= ${lHome} home</text>`;
+        landingRow = { row, x: lX };
+      }
+    });
+
+    // 2) Bridge connector + small shift badge between takeoff row and landing row.
+    if (takeoffRow && landingRow && takeoffRow.row.y !== landingRow.row.y) {
+      // Hook on the right margin: route from takeoff row → down → landing row.
+      // Sit a comfortable distance inside the viewBox right edge so the badge cannot clip.
+      const margin = labelW + trackW + 30;
+      const yT = takeoffRow.row.y + (rowH - 4) / 2;
+      const yL = landingRow.row.y + (rowH - 4) / 2;
+      svg += `<path d="M ${takeoffRow.x} ${yT} L ${margin} ${yT} L ${margin} ${yL} L ${landingRow.x} ${yL}" stroke="#ff6b00" stroke-width="2" fill="none" opacity="0.55" stroke-dasharray="5,3"/>`;
+      // Compact shift badge — just the magnitude. The leg name now lives on the takeoff banner.
+      const shiftH = landingRow.row.dispOff - takeoffRow.row.dispOff;
+      const badgeY = (yT + yL) / 2;
+      const badgeText = `${shiftH >= 0 ? '+' : ''}${shiftH}h`;
+      const badgeW = 8 + badgeText.length * 7;
+      svg += `<rect x="${margin - badgeW / 2}" y="${badgeY - 9}" width="${badgeW}" height="18" rx="9" fill="#ff6b00"/>`;
+      svg += `<text x="${margin}" y="${badgeY + 4}" font-size="10.5" fill="#fff" font-weight="700" text-anchor="middle">${badgeText}</text>`;
+    }
+  };
+  drawFlightLeg(result.milestones.depUtc, result.milestones.arrUtc, 'OUTBOUND');
+  drawFlightLeg(result.milestones.retDepUtc, result.milestones.retArrUtc, 'RETURN');
+
+  svg += `</svg>`;
+  return svg;
+}
+
+// Compare view
+function renderCompare() {
+  const input = readScenario();
+  const aInput = {...input, strategy: $('#cmpA').value};
+  const bInput = {...input, strategy: $('#cmpB').value};
+  const aRes = computeSchedule(aInput);
+  const bRes = computeSchedule(bInput);
+  $('#cmpAOut').innerHTML = renderCompareCol(aRes, aInput);
+  $('#cmpBOut').innerHTML = renderCompareCol(bRes, bInput);
+}
+
+function renderCompareCol(result, input) {
+  const warnCount = result.warnings.filter(w => w.severity === 'warn').length;
+  const infoCount = result.warnings.filter(w => w.severity === 'info').length;
+  return `
+    <dl class="kv">
+      <dt>Strategy</dt><dd>${result.summary.strategyUsed}</dd>
+      <dt>Total doses</dt><dd>${result.summary.totalDoses}</dd>
+      <dt>Warnings</dt><dd>${warnCount}</dd>
+      <dt>Info notes</dt><dd>${infoCount}</dd>
+    </dl>
+    <div style="margin-top:10px">${renderTimeline(result, input)}</div>
+    <div class="warning-list" style="margin-top:10px;max-height:200px;overflow:auto">
+      ${result.warnings.map(w => `<div class="${w.severity}"><strong>${w.code}</strong> — ${w.message}</div>`).join('') || '<div class="info">No warnings.</div>'}
+    </div>
+  `;
+}
+
+// ============================================================
+// SAVED SCENARIOS
+// ============================================================
+const STORE_KEY = 'doseify-harness-scenarios-v1';
+function loadSaved() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; }
+}
+function persistSaved(list) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(list));
+}
+function renderSaved() {
+  const list = loadSaved();
+  const wrap = $('#savedList');
+  if (list.length === 0) {
+    wrap.innerHTML = '<div style="color:#999;padding:8px 0">No saved scenarios yet. Save one from the Scenario tab.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  list.forEach((sc, i) => {
+    const row = document.createElement('div');
+    row.className = 'saved-row';
+    row.innerHTML = `
+      <div class="saved-meta">
+        <div class="saved-name">${sc.name}</div>
+        <div class="saved-desc">${sc.scenario.homeCity} → ${sc.scenario.destCity} · ${sc.scenario.strategy} · ${sc.scenario.meds.length} med(s)</div>
+      </div>
+      <div>
+        <button class="secondary" data-load="${i}">Load</button>
+        <button class="danger" data-del="${i}">Delete</button>
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('button[data-load]').forEach(b =>
+    b.addEventListener('click', e => {
+      const sc = loadSaved()[+e.target.dataset.load];
+      writeScenario(sc.scenario);
+      switchTab('scenario');
+      toast(`Loaded "${sc.name}"`);
+    })
+  );
+  wrap.querySelectorAll('button[data-del]').forEach(b =>
+    b.addEventListener('click', e => {
+      const i = +e.target.dataset.del;
+      const list = loadSaved();
+      const removed = list.splice(i, 1)[0];
+      persistSaved(list);
+      renderSaved();
+      toast(`Deleted "${removed.name}"`);
+    })
+  );
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name) {
+  $$('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  $$('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
+}
+
+// ============================================================
+// WIRE-UP
+// ============================================================
+function init() {
+  populateCities();
+  $('#homeCity').addEventListener('change', () => onCityChange('home'));
+  $('#destCity').addEventListener('change', () => onCityChange('dest'));
+  $$('nav.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+  $('#addMed').addEventListener('click', () => {
+    medsState.push({name: 'New med', homeTimes: ['08:00','20:00'], minIntervalH: 8, maxIntervalH: 16});
+    renderMeds();
+  });
+  $('#computeBtn').addEventListener('click', () => {
+    lastInput = readScenario();
+    lastResult = computeSchedule(lastInput);
+    userOverrides = {}; // fresh compute clears prior edits
+    rerenderWithOverrides();
+    switchTab('output');
+  });
+  $('#cmpBtn').addEventListener('click', renderCompare);
+  $('#saveBtn').addEventListener('click', () => {
+    const name = prompt('Name this scenario:', `${$('#homeCity').value} → ${$('#destCity').value}`);
+    if (!name) return;
+    const list = loadSaved();
+    list.push({name, savedAt: new Date().toISOString(), scenario: readScenario()});
+    persistSaved(list);
+    renderSaved();
+    toast(`Saved "${name}"`);
+  });
+  $('#resetBtn').addEventListener('click', () => {
+    writeScenario(DEFAULT_TOKYO);
+    toast('Reset to Tokyo example');
+  });
+  $('#exportJsonBtn').addEventListener('click', () => {
+    const input = readScenario();
+    const result = computeSchedule(input);
+    const blob = new Blob([JSON.stringify({input, result}, null, 2)], {type:'application/json'});
+    downloadBlob(blob, `doseify-fixture-${Date.now()}.json`);
+  });
+  $('#exportAllBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(loadSaved(), null, 2)], {type:'application/json'});
+    downloadBlob(blob, `doseify-scenarios-${Date.now()}.json`);
+  });
+  $('#importAllBtn').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const txt = await f.text();
+      const data = JSON.parse(txt);
+      if (!Array.isArray(data)) throw new Error('not an array');
+      persistSaved(data);
+      renderSaved();
+      toast(`Imported ${data.length} scenarios`);
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    }
+  });
+
+  writeScenario(DEFAULT_TOKYO);
+  renderSaved();
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+// Default scenario reflects the spreadsheet
+const DEFAULT_TOKYO = {
+  homeCity: 'London', destCity: 'Tokyo',
+  homeOffset: 1, destOffset: 9,
+  departureLocal: { date: '2026-07-06', time: '08:00' },
+  flightHours: 15,
+  returnLocal: { date: '2026-07-16', time: '10:00' },
+  returnFlightHours: 15,
+  meds: [
+    { name: 'Med A', homeTimes: ['08:00','20:00'], minIntervalH: 8, maxIntervalH: 16 },
+  ],
+  strategy: 'gradual',
+  shiftDirection: 'delay',
+  preShiftDays: 5,
+  shiftMinPerDay: 30,
+  postRecoveryDays: 3,
+  sleepStart: 23, sleepEnd: 7,
+  warnSleep: true,
+};
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
