@@ -1150,16 +1150,23 @@ function renderOutput(result, input) {
 const TL = { labelW: 130, trackW: 880, rowH: 44, headerH: 30 };
 
 function renderTimeline(result, input) {
-  const byDate = {};
+  // Group rows by (displayDate, displayOffset) — a single calendar date can show up TWICE
+  // when it contains doses in two different frames (e.g. a return-landing day with `dest`
+  // doses early and `recover` doses after landing). Each row gets exactly one frame so the
+  // X axis is honest.
+  const byKey = {};
   for (const d of result.doses) {
-    if (!byDate[d.displayDate]) byDate[d.displayDate] = [];
-    byDate[d.displayDate].push(d);
+    const k = `${d.displayDate}|${d.displayOffset}`;
+    if (!byKey[k]) byKey[k] = { date: d.displayDate, dispOff: d.displayOffset, doses: [] };
+    byKey[k].doses.push(d);
   }
-  const dates = Object.keys(byDate).sort();
-  if (dates.length === 0) return '<div style="padding:20px;color:#999">No doses computed.</div>';
+  const rows = Object.values(byKey).sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.dispOff - b.dispOff; // when a date has two rows, show home-frame row above dest-frame row
+  });
+  if (rows.length === 0) return '<div style="padding:20px;color:#999">No doses computed.</div>';
 
   const { labelW, trackW, rowH, headerH } = TL;
-  const totalH = dates.length * rowH + headerH + 20;
   const sleepStart = input.sleepStart;
   const sleepEnd = input.sleepEnd;
   const homeOff = +input.homeOffset;
@@ -1171,9 +1178,46 @@ function renderTimeline(result, input) {
     dest: 'var(--dest)', return: '#ffffff', recover: 'var(--recover)'
   };
   const xForHour = h => labelW + (h / 24) * trackW;
-
   // Extra right padding so the cross-day flight bridge + shift badge don't get clipped.
   const rightPad = 90;
+  // Banner space allocated above flight rows so the takeoff/landing label sits OUTSIDE the
+  // dose track — this prevents the banner from covering dose dots and labels.
+  const BANNER_H = 22;
+
+  // Assign each takeoff/landing to a single "preferred" row, then we only draw the banner
+  // there. Takeoffs prefer the origin-side frame; landings prefer the destination-side frame.
+  // Falls back to any matching row if the preferred frame has no row for that date.
+  const m = result.milestones;
+  const candidatesForMoment = utc => rows.filter(r => {
+    const rs = parseLocalToUtc(r.date, '00:00', r.dispOff);
+    return utc >= rs && utc < rs + 24 * MS.hour;
+  });
+  const candidatesForLanding = utc => rows.filter(r => {
+    const rs = parseLocalToUtc(r.date, '00:00', r.dispOff);
+    return utc > rs && utc <= rs + 24 * MS.hour + 60000;
+  });
+  const pickPreferred = (cands, off) => cands.find(r => Math.abs(r.dispOff - off) < 0.01) || cands[0] || null;
+  const assignedTakeoff = (utc, originOff) => pickPreferred(candidatesForMoment(utc), originOff);
+  const assignedLanding = (utc, destOffParam) => pickPreferred(candidatesForLanding(utc), destOffParam);
+
+  const outTakeoffRow = assignedTakeoff(m.depUtc, homeOff);
+  const outLandingRow = assignedLanding(m.arrUtc, destOff);
+  const retTakeoffRow = assignedTakeoff(m.retDepUtc, destOff);
+  const retLandingRow = assignedLanding(m.retArrUtc, homeOff);
+  const bannerRows = new Set([outTakeoffRow, outLandingRow, retTakeoffRow, retLandingRow].filter(Boolean));
+
+  const rowExtras = rows.map(row => bannerRows.has(row) ? BANNER_H : 0);
+
+  // Cumulative Y position for each row, accounting for variable banner space.
+  const rowYs = [];
+  let cursorY = headerH;
+  rows.forEach((row, idx) => {
+    cursorY += rowExtras[idx];
+    rowYs.push(cursorY);
+    cursorY += rowH;
+  });
+  const totalH = cursorY + 20;
+
   let svg = `<svg class="timeline" viewBox="0 0 ${labelW + trackW + rightPad} ${totalH}" xmlns="http://www.w3.org/2000/svg" data-label-w="${labelW}" data-track-w="${trackW}" data-row-h="${rowH}" data-header-h="${headerH}">`;
 
   // Hour grid — major every 6h, minor every 3h
@@ -1186,7 +1230,8 @@ function renderTimeline(result, input) {
   svg += `<text x="${labelW - 6}" y="${headerH - 12}" font-size="9" fill="#999" text-anchor="end">local time of day →</text>`;
 
   // Pre-compute the set of dose UTC timestamps that are part of any 'warn' severity warning,
-  // so we can ring them in red on the timeline. Info-level findings (sleep window, in-flight) are NOT ringed.
+  // so we can ring them in red on the timeline. Info-level findings (sleep window, in-flight)
+  // are shown as a faint amber dashed ring instead.
   const affectedWarn = new Set();
   const affectedInfo = new Set();
   result.warnings.forEach(w => {
@@ -1195,21 +1240,19 @@ function renderTimeline(result, input) {
     w.dosesAffected.forEach(u => set.add(u));
   });
 
-  // Row metadata collected during the per-row pass so we can draw flight legs across rows afterwards.
+  // =====================================================================
+  // PASS 1 — row backgrounds, sleep shading, home ghost, row labels
+  // =====================================================================
   const rowMeta = [];
-
-  dates.forEach((date, idx) => {
-    const y = headerH + idx * rowH;
-    const doses = byDate[date];
+  rows.forEach((row, idx) => {
+    const y = rowYs[idx];
+    const { date, dispOff, doses } = row;
     const phase = doses[0].phase;
-    const dispOff = doses[0].displayOffset;
     const cy = y + (rowH - 4) / 2;
-    rowMeta.push({ date, y, cy, dispOff, phase });
+    rowMeta.push({ date, y, cy, dispOff, phase, doses, idx });
 
-    // Background by phase
     svg += `<rect x="${labelW}" y="${y}" width="${trackW}" height="${rowH - 4}" fill="${phaseColor[phase] || '#fff'}" stroke="#e8e8e8"/>`;
 
-    // Sleep shading
     const drawSleep = (s, e) => {
       const x1 = xForHour(s), x2 = xForHour(e);
       if (x2 > x1) svg += `<rect x="${x1}" y="${y}" width="${x2 - x1}" height="${rowH - 4}" fill="#666" opacity="0.13"/>`;
@@ -1217,7 +1260,6 @@ function renderTimeline(result, input) {
     if (sleepStart < sleepEnd) drawSleep(sleepStart, sleepEnd);
     else { drawSleep(sleepStart, 24); drawSleep(0, sleepEnd); }
 
-    // Home-frame ghost: where "home midnight" and "home noon" fall on this row's local clock.
     if (Math.abs(dispOff - homeOff) > 0.01) {
       const hMidnight = ((homeOff - dispOff) % 24 + 24) % 24;
       const hNoon = (hMidnight + 12) % 24;
@@ -1229,39 +1271,20 @@ function renderTimeline(result, input) {
       svg += `<text x="${gx2 + 3}" y="${y + 11}" font-size="8" fill="#666" font-style="italic">home 12:00</text>`;
     }
 
-    // Row label: date (top line) + offset and phase(s) (bottom line). If the day contains
-    // multiple phases (e.g. flight → dest on a landing day) the label shows the transition.
     const offStr = `UTC${dispOff >= 0 ? '+' : ''}${dispOff}`;
     const uniquePhases = [...new Set(doses.map(d => d.phase))];
     const phaseLabel = uniquePhases.join(' → ');
     svg += `<text x="${labelW - 8}" y="${y + 15}" font-size="11" font-weight="600" text-anchor="end" fill="#1d1d1f">${date}</text>`;
     svg += `<text x="${labelW - 8}" y="${y + 30}" font-size="9" text-anchor="end" fill="#777">${offStr} · ${phaseLabel}</text>`;
-
-    // Dose markers (draggable). Drawn here so they sit below the flight overlay drawn later.
-    doses.forEach((d) => {
-      const h = d.displayHourFloat;
-      const x = xForHour(h);
-      const isOver = !!d.overridden;
-      const isWarn = affectedWarn.has(d.utcMs);
-      const isInfo = affectedInfo.has(d.utcMs);
-      // Priority of indication: warning (red) > edit (blue) > info (faint amber)
-      const fill = isWarn ? '#d70015' : (isOver ? '#0a84ff' : '#1d1d1f');
-      if (isWarn) svg += `<circle cx="${x}" cy="${cy}" r="9" fill="none" stroke="#d70015" stroke-width="2" opacity="0.75"/>`;
-      else if (isOver) svg += `<circle cx="${x}" cy="${cy}" r="8" fill="none" stroke="#0a84ff" stroke-width="1.5" opacity="0.55"/>`;
-      else if (isInfo) svg += `<circle cx="${x}" cy="${cy}" r="8" fill="none" stroke="#b07000" stroke-width="1" stroke-dasharray="2,2" opacity="0.55"/>`;
-      // Hit target (invisible, larger) for easier dragging
-      svg += `<circle class="dose-hit" cx="${x}" cy="${cy}" r="11" fill="transparent" data-idx="${d._idx}" style="cursor:ew-resize"/>`;
-      svg += `<circle class="dose" cx="${x}" cy="${cy}" r="5" fill="${fill}" pointer-events="none"/>`;
-      svg += `<text x="${x}" y="${cy - 9}" font-size="8" fill="${fill}" text-anchor="middle" pointer-events="none">${d.medName.slice(0,5)}</text>`;
-      const timeStr = d.displayLocal.split(' ')[1];
-      svg += `<text x="${x}" y="${cy + 14}" font-size="8" fill="#444" text-anchor="middle" pointer-events="none">${timeStr}</text>`;
-    });
   });
 
-  // ===== Flight legs — draw after rows so the band + connector sit on top =====
-  const drawFlightLeg = (legStartUtc, legEndUtc, legLabel) => {
-    // 1) Shade each row's portion of [legStartUtc, legEndUtc] in its display frame.
-    let takeoffRow = null, landingRow = null;
+  // =====================================================================
+  // PASS 2 — flight legs: bands inside row, vertical takeoff/landing lines
+  //          through row, BANNERS ABOVE row in dedicated space, and the
+  //          bridge connector + shift badge between takeoff & landing rows.
+  // =====================================================================
+  const drawFlightLeg = (legStartUtc, legEndUtc, legLabel, takeoffAssignedRow, landingAssignedRow) => {
+    let takeoffMeta = null, landingMeta = null;
     rowMeta.forEach(row => {
       const rowStartUtc = parseLocalToUtc(row.date, '00:00', row.dispOff);
       const rowEndUtc = rowStartUtc + 24 * MS.hour;
@@ -1272,61 +1295,75 @@ function renderTimeline(result, input) {
       const endHour = (visEnd - rowStartUtc) / MS.hour;
       const x1 = xForHour(startHour);
       const x2 = xForHour(endHour);
-      // Flight band — diagonal hatch + solid fill so it's distinct from phase color
+
+      // Flight band — orange overlay inside the row, on every row the flight touches.
       svg += `<rect x="${x1}" y="${row.y + 1}" width="${x2 - x1}" height="${rowH - 6}" fill="#ff6b00" opacity="0.22"/>`;
-      // Edge indicators when the band touches a row edge mid-flight
+
+      // Edge "continues from / to next day" indicators — at the bottom of the row so they
+      // never clash with dose labels (which sit above the dot).
       const continuesLeft = visStart > legStartUtc + 60000;
       const continuesRight = visEnd < legEndUtc - 60000;
       if (continuesLeft) {
-        svg += `<text x="${x1 + 3}" y="${row.y + 12}" font-size="9" fill="#a04500" font-weight="700">↪ from ${rowMeta[rowMeta.indexOf(row) - 1] ? rowMeta[rowMeta.indexOf(row) - 1].date : 'prev day'}</text>`;
+        const prev = rowMeta[row.idx - 1];
+        svg += `<text x="${x1 + 4}" y="${row.y + rowH - 8}" font-size="9" fill="#a04500" font-weight="700">↪ from ${prev ? prev.date : 'prev day'}</text>`;
       }
       if (continuesRight) {
-        svg += `<text x="${x2 - 3}" y="${row.y + rowH - 10}" font-size="9" fill="#a04500" font-weight="700" text-anchor="end">to ${rowMeta[rowMeta.indexOf(row) + 1] ? rowMeta[rowMeta.indexOf(row) + 1].date : 'next day'} ↪</text>`;
+        const next = rowMeta[row.idx + 1];
+        svg += `<text x="${x2 - 4}" y="${row.y + rowH - 8}" font-size="9" fill="#a04500" font-weight="700" text-anchor="end">to ${next ? next.date : 'next day'} ↪</text>`;
       }
-      // Mark takeoff (if leg starts inside this row). When the row is NOT in home frame,
-      // we also show the home-local time so the user can anchor to "what time was it back home".
-      // The leg name (OUTBOUND / RETURN) is included here rather than as a separate badge.
-      if (legStartUtc >= rowStartUtc && legStartUtc < rowEndUtc) {
+
+      // Banner: only on the assigned takeoff row (no double-draw when multiple rows
+      // could match because the calendar day spans two frames).
+      const isAssignedTakeoff = takeoffAssignedRow &&
+        row.date === takeoffAssignedRow.date &&
+        Math.abs(row.dispOff - takeoffAssignedRow.dispOff) < 0.01;
+      if (isAssignedTakeoff) {
         const tHour = (legStartUtc - rowStartUtc) / MS.hour;
         const tX = xForHour(tHour);
         const tClock = minToTimeStr(Math.round(tHour * 60));
         const tHome = fmtLocal(legStartUtc, homeOff).time;
         const sameFrame = Math.abs(row.dispOff - homeOff) < 0.01;
-        const boxH = sameFrame ? 14 : 24;
-        const boxW = sameFrame ? 150 : 150;
-        svg += `<line x1="${tX}" y1="${row.y - 2}" x2="${tX}" y2="${row.y + rowH - 4}" stroke="#ff6b00" stroke-width="2.5"/>`;
-        svg += `<rect x="${tX + 3}" y="${row.y + 1}" width="${boxW}" height="${boxH}" rx="3" fill="#ff6b00"/>`;
-        svg += `<text x="${tX + 7}" y="${row.y + 12}" font-size="9.5" fill="#fff" font-weight="700">✈ ${legLabel} TAKEOFF ${tClock}</text>`;
-        if (!sameFrame) svg += `<text x="${tX + 7}" y="${row.y + 22}" font-size="8" fill="#fff" opacity="0.95">= ${tHome} home</text>`;
-        takeoffRow = { row, x: tX };
+        const bannerW = sameFrame ? 175 : 215;
+        const bannerY = row.y - BANNER_H + 2;
+        svg += `<line x1="${tX}" y1="${row.y}" x2="${tX}" y2="${row.y + rowH - 4}" stroke="#ff6b00" stroke-width="2.5" opacity="0.7"/>`;
+        svg += `<rect x="${tX + 2}" y="${bannerY}" width="${bannerW}" height="${BANNER_H - 3}" rx="3" fill="#ff6b00"/>`;
+        if (sameFrame) {
+          svg += `<text x="${tX + 8}" y="${bannerY + 13}" font-size="10" fill="#fff" font-weight="700">✈ ${legLabel} TAKEOFF ${tClock}</text>`;
+        } else {
+          svg += `<text x="${tX + 8}" y="${bannerY + 13}" font-size="10" fill="#fff" font-weight="700">✈ ${legLabel} TAKEOFF ${tClock} (= ${tHome} home)</text>`;
+        }
+        takeoffMeta = { row, x: tX };
       }
-      // Mark landing (if leg ends inside this row). Same dual-clock treatment.
-      if (legEndUtc > rowStartUtc && legEndUtc <= rowEndUtc + 60000) {
+
+      const isAssignedLanding = landingAssignedRow &&
+        row.date === landingAssignedRow.date &&
+        Math.abs(row.dispOff - landingAssignedRow.dispOff) < 0.01;
+      if (isAssignedLanding) {
         const lHour = Math.min(24, (legEndUtc - rowStartUtc) / MS.hour);
         const lX = xForHour(lHour);
         const lClock = minToTimeStr(Math.round(lHour * 60));
         const lHome = fmtLocal(legEndUtc, homeOff).time;
         const sameFrame = Math.abs(row.dispOff - homeOff) < 0.01;
-        const boxH = sameFrame ? 14 : 24;
-        const boxW = sameFrame ? 150 : 150;
-        svg += `<line x1="${lX}" y1="${row.y - 2}" x2="${lX}" y2="${row.y + rowH - 4}" stroke="#ff6b00" stroke-width="2.5"/>`;
-        svg += `<rect x="${lX - boxW - 3}" y="${row.y + 1}" width="${boxW}" height="${boxH}" rx="3" fill="#ff6b00"/>`;
-        svg += `<text x="${lX - 7}" y="${row.y + 12}" font-size="9.5" fill="#fff" font-weight="700" text-anchor="end">🛬 ${legLabel} LANDING ${lClock}</text>`;
-        if (!sameFrame) svg += `<text x="${lX - 7}" y="${row.y + 22}" font-size="8" fill="#fff" opacity="0.95" text-anchor="end">= ${lHome} home</text>`;
-        landingRow = { row, x: lX };
+        const bannerW = sameFrame ? 175 : 215;
+        const bannerY = row.y - BANNER_H + 2;
+        svg += `<line x1="${lX}" y1="${row.y}" x2="${lX}" y2="${row.y + rowH - 4}" stroke="#ff6b00" stroke-width="2.5" opacity="0.7"/>`;
+        svg += `<rect x="${lX - bannerW - 2}" y="${bannerY}" width="${bannerW}" height="${BANNER_H - 3}" rx="3" fill="#ff6b00"/>`;
+        if (sameFrame) {
+          svg += `<text x="${lX - 8}" y="${bannerY + 13}" font-size="10" fill="#fff" font-weight="700" text-anchor="end">🛬 ${legLabel} LANDING ${lClock}</text>`;
+        } else {
+          svg += `<text x="${lX - 8}" y="${bannerY + 13}" font-size="10" fill="#fff" font-weight="700" text-anchor="end">🛬 ${legLabel} LANDING ${lClock} (= ${lHome} home)</text>`;
+        }
+        landingMeta = { row, x: lX };
       }
     });
 
-    // 2) Bridge connector + small shift badge between takeoff row and landing row.
-    if (takeoffRow && landingRow && takeoffRow.row.y !== landingRow.row.y) {
-      // Hook on the right margin: route from takeoff row → down → landing row.
-      // Sit a comfortable distance inside the viewBox right edge so the badge cannot clip.
+    // Bridge + shift badge between takeoff and landing rows when they differ.
+    if (takeoffMeta && landingMeta && takeoffMeta.row.y !== landingMeta.row.y) {
       const margin = labelW + trackW + 30;
-      const yT = takeoffRow.row.y + (rowH - 4) / 2;
-      const yL = landingRow.row.y + (rowH - 4) / 2;
-      svg += `<path d="M ${takeoffRow.x} ${yT} L ${margin} ${yT} L ${margin} ${yL} L ${landingRow.x} ${yL}" stroke="#ff6b00" stroke-width="2" fill="none" opacity="0.55" stroke-dasharray="5,3"/>`;
-      // Compact shift badge — just the magnitude. The leg name now lives on the takeoff banner.
-      const shiftH = landingRow.row.dispOff - takeoffRow.row.dispOff;
+      const yT = takeoffMeta.row.y + (rowH - 4) / 2;
+      const yL = landingMeta.row.y + (rowH - 4) / 2;
+      svg += `<path d="M ${takeoffMeta.x} ${yT} L ${margin} ${yT} L ${margin} ${yL} L ${landingMeta.x} ${yL}" stroke="#ff6b00" stroke-width="2" fill="none" opacity="0.55" stroke-dasharray="5,3"/>`;
+      const shiftH = landingMeta.row.dispOff - takeoffMeta.row.dispOff;
       const badgeY = (yT + yL) / 2;
       const badgeText = `${shiftH >= 0 ? '+' : ''}${shiftH}h`;
       const badgeW = 8 + badgeText.length * 7;
@@ -1334,8 +1371,32 @@ function renderTimeline(result, input) {
       svg += `<text x="${margin}" y="${badgeY + 4}" font-size="10.5" fill="#fff" font-weight="700" text-anchor="middle">${badgeText}</text>`;
     }
   };
-  drawFlightLeg(result.milestones.depUtc, result.milestones.arrUtc, 'OUTBOUND');
-  drawFlightLeg(result.milestones.retDepUtc, result.milestones.retArrUtc, 'RETURN');
+  drawFlightLeg(result.milestones.depUtc, result.milestones.arrUtc, 'OUTBOUND', outTakeoffRow, outLandingRow);
+  drawFlightLeg(result.milestones.retDepUtc, result.milestones.retArrUtc, 'RETURN', retTakeoffRow, retLandingRow);
+
+  // =====================================================================
+  // PASS 3 — dose markers, drawn LAST so they sit on top of bands, vertical
+  //          takeoff/landing lines, and anything else painted earlier.
+  // =====================================================================
+  rowMeta.forEach(row => {
+    const cy = row.cy;
+    row.doses.forEach(d => {
+      const h = d.displayHourFloat;
+      const x = xForHour(h);
+      const isOver = !!d.overridden;
+      const isWarn = affectedWarn.has(d.utcMs);
+      const isInfo = affectedInfo.has(d.utcMs);
+      const fill = isWarn ? '#d70015' : (isOver ? '#0a84ff' : '#1d1d1f');
+      if (isWarn) svg += `<circle cx="${x}" cy="${cy}" r="9" fill="none" stroke="#d70015" stroke-width="2" opacity="0.75"/>`;
+      else if (isOver) svg += `<circle cx="${x}" cy="${cy}" r="8" fill="none" stroke="#0a84ff" stroke-width="1.5" opacity="0.55"/>`;
+      else if (isInfo) svg += `<circle cx="${x}" cy="${cy}" r="8" fill="none" stroke="#b07000" stroke-width="1" stroke-dasharray="2,2" opacity="0.55"/>`;
+      svg += `<circle class="dose-hit" cx="${x}" cy="${cy}" r="11" fill="transparent" data-idx="${d._idx}" style="cursor:ew-resize"/>`;
+      svg += `<circle class="dose" cx="${x}" cy="${cy}" r="5" fill="${fill}" pointer-events="none"/>`;
+      svg += `<text x="${x}" y="${cy - 9}" font-size="8" fill="${fill}" text-anchor="middle" pointer-events="none">${d.medName.slice(0,5)}</text>`;
+      const timeStr = d.displayLocal.split(' ')[1];
+      svg += `<text x="${x}" y="${cy + 14}" font-size="8" fill="#444" text-anchor="middle" pointer-events="none">${timeStr}</text>`;
+    });
+  });
 
   svg += `</svg>`;
   return svg;
