@@ -1,0 +1,107 @@
+name: Doseify
+options:
+  bundleIdPrefix: com.strive4it.doseify
+  createIntermediateGroups: true
+  xcodeVersion: "15.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    DEVELOPMENT_TEAM: Z454AW7UL3
+
+targets:
+  Doseify:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Doseify
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify
+        INFOPLIST_FILE: Doseify/Info.plist
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0.0"
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: Doseify/Info.plist
+      properties:
+        CFBundleDisplayName: Doseify
+        NSHealthShareUsageDescription: "Doseify can import your existing medications from Apple Health so you don't have to re-enter them."
+        NSLocationWhenInUseUsageDescription: "Doseify uses your location only to confirm timezone changes when you travel. Your location is never stored."
+        ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes:
+          - fetch
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen:
+          UIColorName: ""
+          UIImageName: ""
+    entitlements:
+      path: Doseify/Doseify.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        aps-environment: development
+    dependencies:
+      - target: DoseifyWidgets
+        embed: true
+      - target: DoseifyWatch
+        embed: true
+
+  DoseifyWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: DoseifyWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.watchkitapp
+        INFOPLIST_FILE: DoseifyWatch/Info.plist
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0.0"
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: DoseifyWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Doseify
+        WKCompanionAppBundleIdentifier: com.strive4it.doseify
+        WKApplication: true
+        ITSAppUsesNonExemptEncryption: false
+
+  DoseifyWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: DoseifyWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.widgets
+        INFOPLIST_FILE: DoseifyWidgets/Info.plist
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0.0"
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: DoseifyWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: DoseifyWidgets
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  DoseifyTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: DoseifyTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Doseify
