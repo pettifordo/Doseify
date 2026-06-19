@@ -6,6 +6,7 @@ import UserNotifications
 struct DoseifyApp: App {
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
 
     static let container: ModelContainer = {
         let schema = Schema([
@@ -33,8 +34,30 @@ struct DoseifyApp: App {
                     requestPermissions()
                     seedDebugDataIfNeeded()
                 }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { refreshSchedule() }
+                }
         }
         .modelContainer(Self.container)
+    }
+
+    /// On every foreground: roll missed doses, top up upcoming doses, and rebuild
+    /// the notification queue from what's still pending — so reminders stay current
+    /// even if the app was logged into from elsewhere or sat closed for a while.
+    @MainActor
+    private func refreshSchedule() {
+        let store = MedicationStore(modelContext: Self.container.mainContext)
+        guard let settings = try? store.settings() else { return }
+        try? store.generateUpcomingDoses(settings: settings)
+        try? store.rolloverMissedDoses(settings: settings)
+        if let inputs = try? store.notificationInputs() {
+            Task {
+                await NotificationService.shared.rescheduleAll(
+                    doses: inputs.doses, medications: inputs.medications,
+                    settings: inputs.settings, nightAlarmActive: inputs.nightAlarm
+                )
+            }
+        }
     }
 
     private func requestPermissions() {

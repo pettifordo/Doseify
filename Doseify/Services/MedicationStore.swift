@@ -77,6 +77,18 @@ final class MedicationStore: ObservableObject {
         try modelContext.save()
     }
 
+    // MARK: - Notification inputs
+
+    /// Everything `NotificationService.rescheduleAll` needs, gathered in one place
+    /// so every caller stays consistent (trip-aware times + night-alarm flag).
+    func notificationInputs() throws -> (doses: [DoseEvent], medications: [Medication], settings: UserSettings, nightAlarm: Bool) {
+        let doses = try modelContext.fetch(FetchDescriptor<DoseEvent>())
+        let meds = try activeMedications()
+        let settings = try self.settings()
+        let nightAlarm = (try activeTrip())?.alarmForSleepWindowDoses ?? false
+        return (doses, meds, settings, nightAlarm)
+    }
+
     // MARK: - Dose events
 
     /// Generate pending DoseEvent records for the coming `days` days for all active medications.

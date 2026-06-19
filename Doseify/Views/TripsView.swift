@@ -258,6 +258,7 @@ struct AddTripView: View {
 
     @State private var strategy: ShiftStrategy = .smart
     @State private var preShiftEnabled = true
+    @State private var alarmForSleepWindowDoses = false
 
     private var homeTZ: TimeZone {
         TimeZone(identifier: settingsList.first?.homeTimezone ?? TimeZone.current.identifier) ?? .current
@@ -308,6 +309,12 @@ struct AddTripView: View {
                     Toggle("Start adjusting before departure", isOn: $preShiftEnabled)
                 } header: {
                     Text("Shift strategy")
+                }
+
+                Section {
+                    Toggle("Alarm for doses during my sleep hours", isOn: $alarmForSleepWindowDoses)
+                } footer: {
+                    Text("When a shifted dose lands inside your sleep window, fire a repeating wake-up alarm instead of a quiet reminder. (To override Silent mode it needs Apple's Critical Alerts approval; until then it's a loud Time-Sensitive alert.)")
                 }
 
                 if !medications.isEmpty {
@@ -424,7 +431,8 @@ struct AddTripView: View {
             arrivalDateTime: reinterpret(retArrival, into: homeTZ), arrivalTimezone: homeTZ.identifier
         )
         return Trip(name: name, destinationTimezone: destinationTZ, shiftStrategy: strategy,
-                    preShiftEnabled: preShiftEnabled, outboundFlight: outbound, returnFlight: ret)
+                    preShiftEnabled: preShiftEnabled, alarmForSleepWindowDoses: alarmForSleepWindowDoses,
+                    outboundFlight: outbound, returnFlight: ret)
     }
 
     private func save() {

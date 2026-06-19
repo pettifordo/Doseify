@@ -95,8 +95,12 @@ struct ExampleMedicationsView: View {
             // Generate today/upcoming DoseEvents for the newly added medications,
             // otherwise Today shows "Nothing scheduled" until the next launch.
             try? store.generateUpcomingDoses(settings: settings)
-            let allMeds = (try? store.activeMedications()) ?? []
-            await NotificationService.shared.rescheduleAll(for: allMeds, settings: settings)
+            if let inputs = try? store.notificationInputs() {
+                await NotificationService.shared.rescheduleAll(
+                    doses: inputs.doses, medications: inputs.medications,
+                    settings: inputs.settings, nightAlarmActive: inputs.nightAlarm
+                )
+            }
         }
 
         dismiss()

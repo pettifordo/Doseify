@@ -145,29 +145,28 @@ struct TodayView: View {
     private func quickLog(_ dose: DoseEvent) {
         let store = MedicationStore(modelContext: modelContext)
         try? store.logDose(dose, at: Date())
-        cancelFollowUps(for: [dose])
+        cancelNotifications(for: [dose])
     }
 
     private func skip(_ dose: DoseEvent) {
         let store = MedicationStore(modelContext: modelContext)
         try? store.skipDose(dose)
-        cancelFollowUps(for: [dose])
+        cancelNotifications(for: [dose])
     }
 
     private func takeAll(_ doses: [DoseEvent]) {
         let store = MedicationStore(modelContext: modelContext)
         let logged = (try? store.logDoses(doses, at: Date())) ?? []
-        cancelFollowUps(for: logged)
+        cancelNotifications(for: logged)
     }
 
-    private func cancelFollowUps(for doses: [DoseEvent]) {
-        let pairs = doses.compactMap { dose -> (Medication, Date)? in
-            guard let med = dose.medication else { return nil }
-            return (med, dose.effectiveScheduledTime)
-        }
+    /// Wipe every pending reminder (at-time, pre-alert, follow-ups, night alarm)
+    /// for each recorded dose, so logging stops the nagging immediately.
+    private func cancelNotifications(for doses: [DoseEvent]) {
+        let ids = doses.map(\.id)
         Task {
-            for (med, at) in pairs {
-                await NotificationService.shared.cancelFollowUps(for: med, scheduledAt: at)
+            for id in ids {
+                await NotificationService.shared.cancel(doseID: id)
             }
         }
     }
@@ -608,15 +607,16 @@ struct DoseActionSheet: View {
         try? store.logDose(dose, at: time)
         dose.note = note.isEmpty ? nil : note
         try? store.save()
-        if let med = dose.medication {
-            Task { await NotificationService.shared.cancelFollowUps(for: med, scheduledAt: dose.effectiveScheduledTime) }
-        }
+        let id = dose.id
+        Task { await NotificationService.shared.cancel(doseID: id) }
         dismiss()
     }
 
     private func skipDose() {
         let store = MedicationStore(modelContext: modelContext)
         try? store.skipDose(dose)
+        let id = dose.id
+        Task { await NotificationService.shared.cancel(doseID: id) }
         dismiss()
     }
 }

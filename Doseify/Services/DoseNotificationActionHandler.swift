@@ -21,14 +21,16 @@ enum DoseNotificationActionHandler {
         switch actionIdentifier {
         case NotificationService.actionTaken:
             try? store.logDose(dose, at: Date())
-            await NotificationService.shared.cancelFollowUps(for: medication, scheduledAt: dose.effectiveScheduledTime)
+            await NotificationService.shared.cancel(doseID: dose.id)
 
         case NotificationService.actionSkip:
             try? store.skipDose(dose)
-            await NotificationService.shared.cancelFollowUps(for: medication, scheduledAt: dose.effectiveScheduledTime)
+            await NotificationService.shared.cancel(doseID: dose.id)
 
         case NotificationService.actionSnooze:
-            await NotificationService.shared.scheduleSnooze(for: medication, scheduledTimeHome: scheduledTimeHome)
+            await NotificationService.shared.scheduleSnooze(
+                for: medication, doseID: dose.id, scheduledTimeHome: scheduledTimeHome
+            )
 
         default:
             break

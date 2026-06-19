@@ -36,9 +36,15 @@ struct ContentView: View {
         guard let settings = try? store.settings() else { return }
         try? store.generateUpcomingDoses(settings: settings)
         try? store.rolloverMissedDoses(settings: settings)
-        // Rebuild the shared notification queue on launch so it rolls forward and
-        // every active medication stays scheduled (not just the first one).
-        let meds = (try? store.activeMedications()) ?? []
-        Task { await NotificationService.shared.rescheduleAll(for: meds, settings: settings) }
+        // Rebuild the notification queue on launch from the current pending doses so
+        // it rolls forward, reflects trip shifts, and drops anything already logged.
+        if let inputs = try? store.notificationInputs() {
+            Task {
+                await NotificationService.shared.rescheduleAll(
+                    doses: inputs.doses, medications: inputs.medications,
+                    settings: inputs.settings, nightAlarmActive: inputs.nightAlarm
+                )
+            }
+        }
     }
 }

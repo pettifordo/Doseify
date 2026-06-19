@@ -16,6 +16,10 @@ final class Trip {
     var preShiftEnabled: Bool
     var status: TripStatus
 
+    /// When true, any dose whose shifted time lands inside the user's sleep window
+    /// fires a repeating wake-up alarm instead of a quiet reminder (default).
+    var alarmForSleepWindowDoses: Bool = false
+
     // Denormalized for queries / list display. Kept in sync via `syncDatesFromFlights()`.
     var startDate: Date
     var endDate: Date
@@ -29,6 +33,7 @@ final class Trip {
         destinationTimezone: String,
         shiftStrategy: ShiftStrategy = .smart,
         preShiftEnabled: Bool = true,
+        alarmForSleepWindowDoses: Bool = false,
         outboundFlight: Flight,
         returnFlight: Flight,
         layovers: [Layover] = []
@@ -38,6 +43,7 @@ final class Trip {
         self.destinationTimezone = destinationTimezone
         self.shiftStrategy = shiftStrategy
         self.preShiftEnabled = preShiftEnabled
+        self.alarmForSleepWindowDoses = alarmForSleepWindowDoses
         self.status = .planned
         self.outboundFlight = outboundFlight
         self.returnFlight = returnFlight
