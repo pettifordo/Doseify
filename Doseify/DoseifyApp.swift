@@ -58,6 +58,8 @@ struct DoseifyApp: App {
                 )
             }
         }
+        // Keep the Watch's dose list current too.
+        PhoneConnectivityService.shared.syncTodayToWatch()
     }
 
     private func requestPermissions() {
@@ -83,6 +85,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // Bring up the Watch bridge so doses can be logged from the wrist.
+        Task { @MainActor in
+            PhoneConnectivityService.shared.start(modelContext: DoseifyApp.container.mainContext)
+        }
         return true
     }
 

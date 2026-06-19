@@ -16,6 +16,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Doseify
+      - path: Shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify
@@ -58,6 +59,7 @@ targets:
     deploymentTarget: "10.0"
     sources:
       - path: DoseifyWatch
+      - path: Shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.watchkitapp

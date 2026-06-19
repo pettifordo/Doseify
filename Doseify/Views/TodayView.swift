@@ -169,6 +169,8 @@ struct TodayView: View {
                 await NotificationService.shared.cancel(doseID: id)
             }
         }
+        // Keep the Watch's list in step with logging done on the phone.
+        PhoneConnectivityService.shared.syncTodayToWatch()
     }
 
     // MARK: - Helpers
