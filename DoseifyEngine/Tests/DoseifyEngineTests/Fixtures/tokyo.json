@@ -1,0 +1,264 @@
+{
+  "label": "tokyo",
+  "input": {
+    "homeOffsetHours": 1,
+    "destOffsetHours": 9,
+    "departureUTC": "2026-07-06T07:00:00.000Z",
+    "arrivalUTC": "2026-07-06T22:00:00.000Z",
+    "returnDepartureUTC": "2026-07-16T01:00:00.000Z",
+    "returnArrivalUTC": "2026-07-16T16:00:00.000Z",
+    "morningTime": "08:00",
+    "eveningTime": "20:00",
+    "preShiftDays": 5,
+    "stepMinutes": 30,
+    "medName": "Med"
+  },
+  "expectedDoses": [
+    {
+      "utc": "2026-06-30T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-06-30T19:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-01T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-01T19:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-02T07:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 30,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-02T19:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 30,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-03T08:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 60,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-03T20:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 60,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-04T08:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 90,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-04T20:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 90,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-05T09:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 120,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-05T21:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 120,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-06T09:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 150,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-06T21:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 150,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-07T10:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 180,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-07T22:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 180,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-08T10:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 210,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-08T22:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 210,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-09T10:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 210,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-09T22:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 210,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-10T10:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 180,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-10T22:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 180,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-11T09:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 150,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-11T21:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 150,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-12T09:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 120,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-12T21:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 120,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-13T08:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 90,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-13T20:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 90,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-14T08:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 60,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-14T20:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 60,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-15T07:30:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 30,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-15T19:30:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 30,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-16T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-16T19:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-17T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-17T19:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-18T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-18T19:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-19T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-19T19:00:00.000Z",
+      "scheduledSlotMinutes": 1200,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    },
+    {
+      "utc": "2026-07-20T07:00:00.000Z",
+      "scheduledSlotMinutes": 480,
+      "accumulatedShiftMinutes": 0,
+      "medName": "Med"
+    }
+  ]
+}
