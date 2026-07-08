@@ -9,6 +9,10 @@ settings:
     SWIFT_VERSION: "5.10"
     DEVELOPMENT_TEAM: Z454AW7UL3
 
+packages:
+  DoseifyEngine:
+    path: DoseifyEngine
+
 targets:
   Doseify:
     type: application
@@ -52,6 +56,7 @@ targets:
         embed: true
       - target: DoseifyWatch
         embed: true
+      - package: DoseifyEngine
 
   DoseifyWatch:
     type: application

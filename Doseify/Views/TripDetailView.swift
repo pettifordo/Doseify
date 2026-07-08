@@ -203,8 +203,13 @@ struct TripDetailView: View {
 
     private func computeSchedule() -> TripSchedule {
         let settings = settingsList.first ?? UserSettings(homeTimezone: homeTZ.identifier)
-        return TimezoneShiftEngine.computeTrip(
-            trip: trip, medications: activeMedications, userSettings: settings, existingOverrides: overrides
+        // Same overlay MedicationStore uses for DoseEvents/notifications, so
+        // the preview always shows the exact times that will fire.
+        return DoseShiftV2Service.overlay(
+            schedule: TimezoneShiftEngine.computeTrip(
+                trip: trip, medications: activeMedications, userSettings: settings, existingOverrides: overrides
+            ),
+            trip: trip, medications: activeMedications, settings: settings
         )
     }
 
@@ -218,6 +223,16 @@ struct TripDetailView: View {
     private func deleteTrip() {
         let store = MedicationStore(modelContext: modelContext)
         try? store.deleteTrip(trip)
+        guard let settings = try? store.settings() else { return }
+        try? store.generateUpcomingDoses(settings: settings)
+        if let inputs = try? store.notificationInputs() {
+            Task {
+                await NotificationService.shared.rescheduleAll(
+                    doses: inputs.doses, medications: inputs.medications,
+                    settings: inputs.settings, nightAlarmActive: inputs.nightAlarm
+                )
+            }
+        }
     }
 
     // MARK: - Small pieces

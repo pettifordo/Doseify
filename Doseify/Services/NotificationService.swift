@@ -35,7 +35,10 @@ final class NotificationService: ObservableObject {
     // MARK: - Category registration
 
     private func registerCategories() {
-        let takenAction  = UNNotificationAction(identifier: Self.actionTaken,  title: "Taken now",   options: [.foreground])
+        // No `.foreground`: logging happens in the background, so "Taken now"
+        // works from the lock screen and from mirrored Apple Watch
+        // notifications without forcing the app open.
+        let takenAction  = UNNotificationAction(identifier: Self.actionTaken,  title: "Taken now",   options: [])
         let snoozeAction = UNNotificationAction(identifier: Self.actionSnooze, title: "Snooze 5 min", options: [])
         let skipAction   = UNNotificationAction(identifier: Self.actionSkip,   title: "Skip dose",   options: [.destructive])
 
@@ -101,10 +104,12 @@ final class NotificationService: ObservableObject {
                 continue
             }
 
+            let travelNote = isTripShifted(dose) ? " · adjusted for travel" : ""
+
             // At-time — the most important slot for this dose.
             await scheduleNotification(
                 id: doseID(dose, "at"),
-                title: "Time for \(med.name)", body: doseBody(med),
+                title: "Time for \(med.name)", body: doseBody(med) + travelNote,
                 fireDate: fireDate, doseID: dose.id, medicationID: med.id,
                 scheduledTimeHome: dose.scheduledTimeHome,
                 isCritical: med.isCriticalAlert, categoryIdentifier: Self.categoryDose
@@ -132,7 +137,7 @@ final class NotificationService: ObservableObject {
                 await scheduleNotification(
                     id: doseID(dose, "followup\(followUpMins)"),
                     title: "Did you take \(med.name)?",
-                    body: "Your dose was due \(followUpMins) min ago.",
+                    body: "Your dose was due \(followUpMins) min ago.\(travelNote)",
                     fireDate: fireDate.addingTimeInterval(Double(followUpMins) * 60),
                     doseID: dose.id, medicationID: med.id, scheduledTimeHome: dose.scheduledTimeHome,
                     isCritical: false, categoryIdentifier: Self.categoryDose
@@ -222,6 +227,12 @@ final class NotificationService: ObservableObject {
 
     // MARK: - Private helpers
 
+    /// True when the dose's effective fire time was shifted from its home-anchored
+    /// schedule by more than one minute — i.e. travel is actively adjusting timing.
+    private func isTripShifted(_ dose: DoseEvent) -> Bool {
+        abs(dose.effectiveScheduledTime.timeIntervalSince(dose.scheduledTimeHome)) > 60
+    }
+
     private func doseID(_ dose: DoseEvent, _ suffix: String) -> String {
         "\(dose.id.uuidString)-\(suffix)"
     }
@@ -270,7 +281,13 @@ final class NotificationService: ObservableObject {
         content.interruptionLevel = .timeSensitive
         content.sound = .default
 
-        let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: fireDate)
+        // Use UTC for the trigger's date components so the notification fires at
+        // the correct absolute instant even if the device's timezone changes
+        // mid-flight (e.g. when Auto-Update Timezone kicks in after landing).
+        var utcCal = Calendar(identifier: .gregorian)
+        utcCal.timeZone = TimeZone(identifier: "UTC") ?? .current
+        var comps = utcCal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: fireDate)
+        comps.timeZone = utcCal.timeZone
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 

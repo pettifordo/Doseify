@@ -248,6 +248,8 @@ struct AddTripView: View {
     @Query(sort: \Medication.name) private var medications: [Medication]
     @Query private var settingsList: [UserSettings]
 
+    @State private var overlapError: String?
+
     @State private var name = ""
     @State private var destinationTZ = "Asia/Tokyo"
 
@@ -337,6 +339,14 @@ struct AddTripView: View {
                     Button("Save", action: save).fontWeight(.semibold)
                 }
             }
+            .alert("Trip conflict", isPresented: Binding(
+                get: { overlapError != nil },
+                set: { if !$0 { overlapError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(overlapError ?? "")
+            }
         }
     }
 
@@ -347,9 +357,16 @@ struct AddTripView: View {
     // MARK: Preview
 
     private var previewSchedule: TripSchedule {
-        TimezoneShiftEngine.computeTrip(
-            trip: buildTrip(), medications: Array(medications),
-            userSettings: previewSettings(), existingOverrides: []
+        let trip = buildTrip()
+        let settings = previewSettings()
+        // Same overlay MedicationStore uses for DoseEvents/notifications, so
+        // the pre-save preview matches what will actually be scheduled.
+        return DoseShiftV2Service.overlay(
+            schedule: TimezoneShiftEngine.computeTrip(
+                trip: trip, medications: Array(medications),
+                userSettings: settings, existingOverrides: []
+            ),
+            trip: trip, medications: Array(medications), settings: settings
         )
     }
 
@@ -438,7 +455,22 @@ struct AddTripView: View {
     private func save() {
         let trip = buildTrip()
         let store = MedicationStore(modelContext: modelContext)
-        try? store.addTrip(trip)
+        do {
+            try store.addTrip(trip)
+        } catch {
+            overlapError = error.localizedDescription
+            return
+        }
+        guard let settings = try? store.settings() else { dismiss(); return }
+        try? store.generateUpcomingDoses(settings: settings)
+        if let inputs = try? store.notificationInputs() {
+            Task {
+                await NotificationService.shared.rescheduleAll(
+                    doses: inputs.doses, medications: inputs.medications,
+                    settings: inputs.settings, nightAlarmActive: inputs.nightAlarm
+                )
+            }
+        }
         dismiss()
     }
 

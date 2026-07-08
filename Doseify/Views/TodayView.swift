@@ -5,6 +5,7 @@ struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \DoseEvent.effectiveScheduledTime, order: .reverse) private var allDoses: [DoseEvent]
     @Query private var medications: [Medication]
+    @Query(sort: \Trip.startDate) private var allTrips: [Trip]
 
     @State private var selectedDose: DoseEvent?
     @State private var showAllHistory = false
@@ -44,7 +45,7 @@ struct TodayView: View {
             Group {
                 if todayDoses.isEmpty && recentHistory.isEmpty {
                     ScrollView {
-                        VStack(spacing: 20) { streakBanner; refillBanner; emptyState }
+                        VStack(spacing: 20) { streakBanner; refillBanner; travelBanner; emptyState }
                             .padding().padding(.bottom, 32)
                     }
                 } else {
@@ -52,6 +53,11 @@ struct TodayView: View {
                         Section {
                             streakBanner
                             refillBanner
+                        }
+                        .plainCardRow()
+
+                        Section {
+                            travelBanner
                         }
                         .plainCardRow()
 
@@ -197,6 +203,33 @@ struct TodayView: View {
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    // Active trip whose dose timings are currently shifted.
+    private var activeShiftedTrip: Trip? {
+        let now = Date()
+        return allTrips.first { $0.status != .cancelled && $0.startDate <= now && $0.endDate >= now }
+    }
+
+    @ViewBuilder
+    private var travelBanner: some View {
+        if let trip = activeShiftedTrip {
+            let dest = cityName(trip.destinationTimezone)
+            HStack(spacing: 10) {
+                Image(systemName: "airplane").foregroundStyle(Color.doseSlate)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Travelling to \(dest)")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Dose times adjusted for your trip · notifications updated")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.doseSlate.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.doseSlate.opacity(0.25), lineWidth: 1))
+        }
     }
 
     // Medications low on supply (only those actively tracking inventory).

@@ -22,10 +22,14 @@ enum DoseNotificationActionHandler {
         case NotificationService.actionTaken:
             try? store.logDose(dose, at: Date())
             await NotificationService.shared.cancel(doseID: dose.id)
+            // Keep the Watch's dose list in step — the action may have been
+            // tapped on a mirrored Watch notification or the phone lock screen.
+            PhoneConnectivityService.shared.syncTodayToWatch()
 
         case NotificationService.actionSkip:
             try? store.skipDose(dose)
             await NotificationService.shared.cancel(doseID: dose.id)
+            PhoneConnectivityService.shared.syncTodayToWatch()
 
         case NotificationService.actionSnooze:
             await NotificationService.shared.scheduleSnooze(

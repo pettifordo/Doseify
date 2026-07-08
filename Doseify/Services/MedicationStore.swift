@@ -105,8 +105,15 @@ final class MedicationStore: ObservableObject {
         if let trip = trip {
             let overrides = try modelContext.fetch(FetchDescriptor<DoseOverride>())
                 .filter { $0.tripId == trip.id }
-            let schedule = TimezoneShiftEngine.computeTrip(
-                trip: trip, medications: meds, userSettings: settings, existingOverrides: overrides
+            // The V2 overlay rewrites twice-daily groups with the symmetric-ramp
+            // engine. The SAME overlay feeds the trip preview screens, so the
+            // times shown there are exactly the times that become DoseEvents
+            // and notifications.
+            let schedule = DoseShiftV2Service.overlay(
+                schedule: TimezoneShiftEngine.computeTrip(
+                    trip: trip, medications: meds, userSettings: settings, existingOverrides: overrides
+                ),
+                trip: trip, medications: meds, settings: settings
             )
             for group in schedule.doseGroups {
                 for entry in group.entries {
@@ -118,11 +125,18 @@ final class MedicationStore: ObservableObject {
         }
 
         // Fetch all existing doses once; de-dupe in memory (avoids #Predicate in a tight loop).
+        // Pending future doses are re-timed if a trip is now active (or just removed) so
+        // effectiveScheduledTime stays in sync without deleting logged history.
         let allExisting = try modelContext.fetch(FetchDescriptor<DoseEvent>())
-        var existingKeys = Set<String>()
+        var loggedKeys = Set<String>()      // taken / missed / skipped — never touch
+        var pendingByKey: [String: DoseEvent] = [:] // pending future — update in place
         for d in allExisting {
-            if let medID = d.medication?.id {
-                existingKeys.insert("\(medID)-\(d.scheduledTimeHome.timeIntervalSince1970)")
+            guard let medID = d.medication?.id else { continue }
+            let key = "\(medID)-\(d.scheduledTimeHome.timeIntervalSince1970)"
+            if d.status == .pending && d.effectiveScheduledTime > now {
+                pendingByKey[key] = d
+            } else {
+                loggedKeys.insert(key)
             }
         }
 
@@ -135,8 +149,18 @@ final class MedicationStore: ObservableObject {
                 for tod in med.scheduledTimesOfDay {
                     let homeDate = tod.date(on: day, in: homeTZ)
                     let key = "\(med.id)-\(homeDate.timeIntervalSince1970)"
-                    guard !existingKeys.contains(key) else { continue }
-                    existingKeys.insert(key)
+                    guard !loggedKeys.contains(key) else { continue }
+
+                    // If the dose already exists (pending), just refresh its effective
+                    // time so trip changes propagate without duplicating the record.
+                    if let existing = pendingByKey[key] {
+                        let entry = shiftLookup[key]
+                        existing.effectiveScheduledTime = entry?.effectiveTimeUTC ?? homeDate
+                        existing.effectiveTimezone = entry?.effectiveTimezone ?? settings.homeTimezone
+                        continue
+                    }
+
+                    // Otherwise insert a fresh DoseEvent as before.
 
                     let entry = shiftLookup[key]
                     let effectiveDate = entry?.effectiveTimeUTC ?? homeDate
@@ -241,7 +265,21 @@ final class MedicationStore: ObservableObject {
 
     // MARK: - Trip CRUD
 
+    enum TripError: LocalizedError {
+        case overlapsExistingTrip(String)
+        var errorDescription: String? {
+            switch self { case .overlapsExistingTrip(let name): return "This trip overlaps with \"\(name)\". Remove or adjust the other trip first." }
+        }
+    }
+
     func addTrip(_ trip: Trip) throws {
+        let existing = try modelContext.fetch(FetchDescriptor<Trip>())
+        for other in existing where other.status != .cancelled {
+            if trip.startDate <= other.endDate && trip.endDate >= other.startDate {
+                let name = other.name.isEmpty ? cityName(other.destinationTimezone) : other.name
+                throw TripError.overlapsExistingTrip(name)
+            }
+        }
         modelContext.insert(trip)
         try modelContext.save()
     }
