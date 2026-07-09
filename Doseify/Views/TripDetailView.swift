@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 /// The polished trip schedule: a summary header, any warnings, and the per-day
 /// dose schedule with badges. Tap any dose to override its time (SPEC §2.4.7).
@@ -34,6 +35,7 @@ struct TripDetailView: View {
                     }
                     legend
                     let days = TripScheduleLayout.days(from: schedule, medications: medications, homeTZ: homeTZ)
+                    timelineCard(days)
                     ForEach(days) { group in
                         dayCard(group)
                     }
@@ -156,6 +158,86 @@ struct TripDetailView: View {
 
     private var legendBadges: [ShiftBadge] { [.stable, .shifting, .skipped, .inFlight, .manualOverride] }
 
+    // MARK: - Shift timeline chart
+
+    private struct TimelinePoint: Identifiable {
+        let id: String
+        let day: Date
+        let hour: Double        // wall-clock hour in the dose's display timezone
+        let badge: ShiftBadge
+    }
+
+    /// The harness-style visual: one dot per dose, day by day, on a 24h axis.
+    /// The drifting dot column *is* the shift — you can see the ramp out and back.
+    @ViewBuilder
+    private func timelineCard(_ days: [ScheduleDay]) -> some View {
+        let points: [TimelinePoint] = days.flatMap { day in
+            day.rows.map { row in
+                var cal = Calendar(identifier: .gregorian)
+                cal.timeZone = TimeZone(identifier: row.tzID) ?? .current
+                let c = cal.dateComponents([.hour, .minute], from: row.time)
+                return TimelinePoint(
+                    id: row.id, day: day.day,
+                    hour: Double(c.hour ?? 0) + Double(c.minute ?? 0) / 60,
+                    badge: row.badge
+                )
+            }
+        }
+        let settings = settingsList.first
+        let sleepStart = Double(settings?.sleepWindowStart.hour ?? 23) + Double(settings?.sleepWindowStart.minute ?? 0) / 60
+        let sleepEnd = Double(settings?.sleepWindowEnd.hour ?? 7) + Double(settings?.sleepWindowEnd.minute ?? 0) / 60
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Shift timeline")
+                .font(.subheadline.weight(.semibold))
+            Text("Each dot is a dose, shown at local clock time. Shaded band = your sleep hours.")
+                .font(.caption2).foregroundStyle(.secondary)
+            Chart {
+                // Sleep window band (may wrap past midnight → two bands).
+                if sleepStart < sleepEnd {
+                    RectangleMark(xStart: .value("From", sleepStart), xEnd: .value("To", sleepEnd))
+                        .foregroundStyle(Color.doseSlate.opacity(0.08))
+                } else {
+                    RectangleMark(xStart: .value("From", sleepStart), xEnd: .value("To", 24.0))
+                        .foregroundStyle(Color.doseSlate.opacity(0.08))
+                    RectangleMark(xStart: .value("From", 0.0), xEnd: .value("To", sleepEnd))
+                        .foregroundStyle(Color.doseSlate.opacity(0.08))
+                }
+                ForEach(points) { point in
+                    PointMark(
+                        x: .value("Local time", point.hour),
+                        y: .value("Day", point.day, unit: .day)
+                    )
+                    .foregroundStyle(point.badge.color)
+                    .symbolSize(point.badge == .manualOverride ? 70 : 40)
+                }
+            }
+            .chartXScale(domain: 0...24)
+            .chartXAxis {
+                AxisMarks(values: [0, 6, 12, 18, 24]) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let h = value.as(Double.self) {
+                            Text(h == 0 || h == 24 ? "12a" : h == 12 ? "12p" : h < 12 ? "\(Int(h))a" : "\(Int(h) - 12)p")
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
+            .chartYAxis {
+                AxisMarks(values: .stride(by: .day, count: max(1, days.count / 6))) { _ in
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).day(), centered: false)
+                        .font(.caption2)
+                }
+            }
+            .frame(height: max(140, CGFloat(days.count) * 16))
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.background, in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.04), radius: 3, y: 1)
+    }
+
     // MARK: - Day card
 
     private func dayCard(_ group: ScheduleDay) -> some View {
@@ -182,7 +264,10 @@ struct TripDetailView: View {
                 Text(row.groupName).font(.subheadline.weight(.medium))
                 Text(row.contextLabel).font(.caption).foregroundStyle(.secondary)
                 if let gap = row.gapLabel {
-                    Text(gap).font(.caption2.monospacedDigit()).foregroundStyle(.tertiary)
+                    // Orange when the spacing strays >1h from the med's cadence.
+                    Label(gap, systemImage: row.gapIsAbnormal ? "exclamationmark.triangle.fill" : "arrow.up.arrow.down")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(row.gapIsAbnormal ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.tertiary))
                 }
             }
             Spacer()

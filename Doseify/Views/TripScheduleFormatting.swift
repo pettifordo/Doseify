@@ -134,6 +134,8 @@ struct ScheduleRow: Identifiable {
     let isOverride: Bool
     /// Interval since the group's previous dose (nil for the first dose shown).
     let gapFromPrevious: TimeInterval?
+    /// The group's normal spacing (24h / doses-per-day) for judging the gap.
+    let expectedGap: TimeInterval
 
     /// "12h 30m since last dose" — makes the shift engine's spacing visible.
     var gapLabel: String? {
@@ -141,6 +143,13 @@ struct ScheduleRow: Identifiable {
         let totalMinutes = Int((gap / 60).rounded())
         let h = totalMinutes / 60, m = totalMinutes % 60
         return m == 0 ? "\(h)h since last dose" : "\(h)h \(m)m since last dose"
+    }
+
+    /// True when the gap strays more than an hour from the group's cadence —
+    /// worth the user's (and their doctor's) attention.
+    var gapIsAbnormal: Bool {
+        guard let gap = gapFromPrevious else { return false }
+        return abs(gap - expectedGap) > 3600
     }
 
     var contextLabel: String {
@@ -183,6 +192,10 @@ enum TripScheduleLayout {
             for (i, entry) in ordered.enumerated() where i > 0 {
                 previousTime["\(entry.effectiveTimeUTC.timeIntervalSince1970)"] = ordered[i - 1].effectiveTimeUTC
             }
+            // Normal cadence: 24h ÷ doses-per-day (12h for 2x-daily, 24h for 1x).
+            let dayCount = max(1, Set(group.entries.map { $0.day }).count)
+            let dosesPerDay = max(1, Int((Double(group.entries.count) / Double(dayCount)).rounded()))
+            let expectedGap = TimeInterval(86400 / dosesPerDay)
             for entry in group.entries {
                 let comps = homeCal.dateComponents([.hour, .minute], from: entry.scheduledTimeHomeUTC)
                 let slot = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
@@ -198,7 +211,8 @@ enum TripScheduleLayout {
                     badge: entry.badge,
                     context: entry.context,
                     isOverride: entry.isManualOverride,
-                    gapFromPrevious: entry.isSkipped ? nil : prev.map { entry.effectiveTimeUTC.timeIntervalSince($0) }
+                    gapFromPrevious: entry.isSkipped ? nil : prev.map { entry.effectiveTimeUTC.timeIntervalSince($0) },
+                    expectedGap: expectedGap
                 ))
             }
         }
