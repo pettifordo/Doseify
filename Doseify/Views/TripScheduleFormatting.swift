@@ -124,11 +124,24 @@ struct ScheduleRow: Identifiable {
     let groupId: UUID
     let groupName: String
     let scheduledDay: Date
+    /// Home minutes-from-midnight of this dose's slot — identifies which of the
+    /// day's doses this is, so overrides target exactly one dose.
+    let slotMinutes: Int
     let time: Date
     let tzID: String
     let badge: ShiftBadge
     let context: LocationContext
     let isOverride: Bool
+    /// Interval since the group's previous dose (nil for the first dose shown).
+    let gapFromPrevious: TimeInterval?
+
+    /// "12h 30m since last dose" — makes the shift engine's spacing visible.
+    var gapLabel: String? {
+        guard let gap = gapFromPrevious else { return nil }
+        let totalMinutes = Int((gap / 60).rounded())
+        let h = totalMinutes / 60, m = totalMinutes % 60
+        return m == 0 ? "\(h)h since last dose" : "\(h)h \(m)m since last dose"
+    }
 
     var contextLabel: String {
         switch context {
@@ -153,22 +166,39 @@ struct ScheduleDay: Identifiable {
 enum TripScheduleLayout {
     /// Flatten the engine's grouped schedule into per-day rows, sorted by day then time.
     static func days(from schedule: TripSchedule, medications: [Medication], homeTZ: TimeZone) -> [ScheduleDay] {
+        var homeCal = Calendar(identifier: .gregorian)
+        homeCal.timeZone = homeTZ
+
         var rows: [ScheduleRow] = []
         for group in schedule.doseGroups {
             let groupName = group.medicationIDs
                 .compactMap { id in medications.first { $0.id == id }?.name }
                 .joined(separator: " + ")
+            // Gap = spacing between this group's consecutive effective times
+            // (skipped doses excluded — nothing is taken then).
+            let ordered = group.entries
+                .filter { !$0.isSkipped }
+                .sorted { $0.effectiveTimeUTC < $1.effectiveTimeUTC }
+            var previousTime: [String: Date] = [:]
+            for (i, entry) in ordered.enumerated() where i > 0 {
+                previousTime["\(entry.effectiveTimeUTC.timeIntervalSince1970)"] = ordered[i - 1].effectiveTimeUTC
+            }
             for entry in group.entries {
+                let comps = homeCal.dateComponents([.hour, .minute], from: entry.scheduledTimeHomeUTC)
+                let slot = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+                let prev = previousTime["\(entry.effectiveTimeUTC.timeIntervalSince1970)"]
                 rows.append(ScheduleRow(
                     id: "\(group.groupId)-\(entry.effectiveTimeUTC.timeIntervalSince1970)",
                     groupId: group.groupId,
                     groupName: groupName.isEmpty ? "Dose" : groupName,
                     scheduledDay: entry.day,
+                    slotMinutes: slot,
                     time: entry.effectiveTimeUTC,
                     tzID: entry.effectiveTimezone,
                     badge: entry.badge,
                     context: entry.context,
-                    isOverride: entry.isManualOverride
+                    isOverride: entry.isManualOverride,
+                    gapFromPrevious: entry.isSkipped ? nil : prev.map { entry.effectiveTimeUTC.timeIntervalSince($0) }
                 ))
             }
         }

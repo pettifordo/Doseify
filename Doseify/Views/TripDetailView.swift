@@ -181,6 +181,9 @@ struct TripDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.groupName).font(.subheadline.weight(.medium))
                 Text(row.contextLabel).font(.caption).foregroundStyle(.secondary)
+                if let gap = row.gapLabel {
+                    Text(gap).font(.caption2.monospacedDigit()).foregroundStyle(.tertiary)
+                }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
@@ -216,7 +219,8 @@ struct TripDetailView: View {
     private func existingOverride(for row: ScheduleRow) -> DoseOverride? {
         overrides.first {
             $0.shiftGroupId == row.groupId &&
-            TimezoneShiftEngine.isSameDay($0.scheduledDate, row.scheduledDay, tz: homeTZ)
+            TimezoneShiftEngine.isSameDay($0.scheduledDate, row.scheduledDay, tz: homeTZ) &&
+            ($0.slotMinutes == -1 || $0.slotMinutes == row.slotMinutes)
         }
     }
 
@@ -233,6 +237,8 @@ struct TripDetailView: View {
                 )
             }
         }
+        // Doses reverted to home times — keep the Watch in step.
+        PhoneConnectivityService.shared.syncTodayToWatch()
     }
 
     // MARK: - Small pieces
@@ -334,7 +340,8 @@ struct DoseOverrideSheet: View {
         } else {
             let ov = DoseOverride(
                 tripId: trip.id, shiftGroupId: row.groupId,
-                scheduledDate: row.scheduledDay, customTimeUTC: customUTC
+                scheduledDate: row.scheduledDay, slotMinutes: row.slotMinutes,
+                customTimeUTC: customUTC
             )
             modelContext.insert(ov)
         }

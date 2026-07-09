@@ -46,10 +46,24 @@ enum DoseShiftV2Service {
                   let rep = groupMeds.first else { return group }
 
             let newEntries = group.entries.map { entry -> ScheduledDose in
-                guard !entry.isManualOverride,
-                      let v = v2["\(rep.id)-\(entry.scheduledTimeHomeUTC.timeIntervalSince1970)"]
-                else { return entry }
-                return v
+                guard !entry.isManualOverride else { return entry }
+                if let v = v2["\(rep.id)-\(entry.scheduledTimeHomeUTC.timeIntervalSince1970)"] {
+                    return v
+                }
+                // Outside V2's window the shift is zero by definition (V2 has
+                // fully unwound by return day). Never fall back to the old
+                // engine's times here — mixing the two ramps makes the
+                // schedule wobble back and forth around the seams.
+                return ScheduledDose(
+                    scheduledTimeHomeUTC: entry.scheduledTimeHomeUTC,
+                    day: entry.day,
+                    effectiveTimeUTC: entry.scheduledTimeHomeUTC,
+                    effectiveTimezone: settings.homeTimezone,
+                    context: entry.context,
+                    badge: .stable,
+                    isManualOverride: false,
+                    isSkipped: false
+                )
             }
             return DoseGroupSchedule(
                 groupId: group.groupId, medicationIDs: group.medicationIDs, entries: newEntries

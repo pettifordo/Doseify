@@ -471,6 +471,9 @@ struct AddTripView: View {
                 )
             }
         }
+        // The trip re-timed pending doses — push the new times to the Watch
+        // so both devices show the same schedule.
+        PhoneConnectivityService.shared.syncTodayToWatch()
         dismiss()
     }
 

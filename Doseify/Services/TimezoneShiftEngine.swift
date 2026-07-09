@@ -489,10 +489,13 @@ struct TimezoneShiftEngine {
                 var isOverride = false
                 var effectiveTZID = displayTZ.identifier
 
-                // Step 7: manual override wins for this one dose.
+                // Step 7: manual override wins for this one dose. Matched by
+                // slot so editing one dose never moves the day's other doses
+                // (-1 = legacy override rows without a slot).
                 if let ov = overrides.first(where: {
                     $0.tripId == tripID && $0.shiftGroupId == group.id &&
-                    isSameDay($0.scheduledDate, cumDay.day, tz: homeTZ)
+                    isSameDay($0.scheduledDate, cumDay.day, tz: homeTZ) &&
+                    ($0.slotMinutes == -1 || $0.slotMinutes == tod.totalMinutes)
                 }) {
                     effective = ov.customTimeUTC
                     badge = .manualOverride

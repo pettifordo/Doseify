@@ -46,5 +46,6 @@ struct ContentView: View {
                 )
             }
         }
+        PhoneConnectivityService.shared.syncTodayToWatch()
     }
 }

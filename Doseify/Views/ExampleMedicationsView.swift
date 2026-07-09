@@ -101,6 +101,7 @@ struct ExampleMedicationsView: View {
                     settings: inputs.settings, nightAlarmActive: inputs.nightAlarm
                 )
             }
+            PhoneConnectivityService.shared.syncTodayToWatch()
         }
 
         dismiss()
