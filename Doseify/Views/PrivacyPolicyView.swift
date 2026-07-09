@@ -27,7 +27,7 @@ struct PrivacyPolicyView: View {
 
                 section(
                     title: "Apple Health",
-                    body: "If you choose to enable it, Doseify can write the medications you log to the Health app so they appear in your Health timeline. This is write-only — Doseify does not read other data from Health, and you can revoke this permission at any time in iOS Settings → Privacy → Health."
+                    body: "If you choose to use it, Doseify can import your medication list from the Health app so you don't have to re-enter it. This is read-only and limited to your medications — Doseify does not read any other Health data and does not write anything to Health. You can revoke this permission at any time in iOS Settings → Privacy & Security → Health."
                 )
 
                 section(
@@ -71,7 +71,7 @@ struct PrivacyPolicyView: View {
         }
     }
 
-    private static let lastUpdated: String = "June 2026"
+    private static let lastUpdated: String = "July 2026"
 }
 
 #Preview {
