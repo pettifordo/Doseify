@@ -33,16 +33,24 @@ final class HealthKitGateway {
     /// Ask for read access to the user's medications. Returns `false` when the
     /// feature is unsupported or the request fails. (HealthKit never reveals
     /// whether read access was actually granted — run the query and check.)
+    ///
+    /// Medications use PER-OBJECT authorization: the user picks which meds to
+    /// share from a HealthKit sheet. Passing this type to the regular
+    /// `requestAuthorization(toShare:read:)` raises an uncatchable ObjC
+    /// exception and crashes — it must go through
+    /// `requestPerObjectReadAuthorization`.
     func requestMedicationReadAuthorization() async -> Bool {
         guard isMedicationImportSupported else { return false }
         if #available(iOS 26.0, *) {
             do {
-                try await store.requestAuthorization(
-                    toShare: [],
-                    read: [HKObjectType.userAnnotatedMedicationType()]
+                try await store.requestPerObjectReadAuthorization(
+                    for: HKObjectType.userAnnotatedMedicationType(),
+                    predicate: nil
                 )
                 return true
             } catch {
+                // User cancelled the sheet or HealthKit refused — treat as
+                // "nothing shared"; the query will simply return no results.
                 return false
             }
         }
