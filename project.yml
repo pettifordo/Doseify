@@ -26,8 +26,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify
         TARGETED_DEVICE_FAMILY: 1        # iPhone only — no iPad screenshots required
         INFOPLIST_FILE: Doseify/Info.plist
-        CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: "2.0.0"
         CODE_SIGN_STYLE: Automatic
     info:
       path: Doseify/Info.plist
@@ -70,8 +70,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.watchkitapp
         INFOPLIST_FILE: DoseifyWatch/Info.plist
-        CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: "2.0.0"
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
@@ -99,8 +99,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.watchkitapp.doseifycomplication
         INFOPLIST_FILE: DoseifyWatchComplication/Info.plist
-        CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: "2.0.0"
         CODE_SIGN_STYLE: Automatic
     info:
       path: DoseifyWatchComplication/Info.plist
@@ -120,8 +120,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.strive4it.doseify.widgets
         TARGETED_DEVICE_FAMILY: 1
         INFOPLIST_FILE: DoseifyWidgets/Info.plist
-        CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: "2.0.0"
         CODE_SIGN_STYLE: Automatic
     info:
       path: DoseifyWidgets/Info.plist
