@@ -14,7 +14,7 @@ enum AdherenceReportPDF {
         let df = DateFormatter(); df.dateStyle = .medium
         let stamp = ISO8601DateFormatter().string(from: now).prefix(10)
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Doseify-Adherence-\(stamp).pdf")
+            .appendingPathComponent("TimeShiftMeds-Adherence-\(stamp).pdf")
 
         let title: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 22)]
         let h2: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 14)]
@@ -37,7 +37,7 @@ enum AdherenceReportPDF {
                     y += h + gap
                 }
 
-                draw("Doseify — Adherence Report", title)
+                draw("TimeShift Meds — Adherence Report", title)
                 draw("Generated \(df.string(from: now))", muted, gap: 16)
 
                 let windows: [(String, AdherenceCalculator.Stats)] = [

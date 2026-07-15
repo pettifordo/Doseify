@@ -57,7 +57,7 @@ struct TripsView: View {
                 .font(.system(size: 52))
                 .foregroundStyle(Color.doseSage)
             Text("No trips yet").font(.title3.weight(.semibold))
-            Text("Plan a trip and Doseify will gently migrate your dose times across timezones — protecting your sleep along the way.")
+            Text("Plan a trip and TimeShift Meds will gently migrate your dose times across timezones — protecting your sleep along the way.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -32,10 +32,10 @@ targets:
     info:
       path: Doseify/Info.plist
       properties:
-        CFBundleDisplayName: Doseify
-        NSHealthShareUsageDescription: "Doseify can import your existing medications from Apple Health so you don't have to re-enter them."
-        NSHealthUpdateUsageDescription: "Doseify only reads your medication list from Apple Health to import it; it does not write any information back to Health."
-        NSLocationWhenInUseUsageDescription: "Doseify uses your location only to confirm timezone changes when you travel. Your location is never stored."
+        CFBundleDisplayName: TimeShift Meds
+        NSHealthShareUsageDescription: "TimeShift Meds can import your existing medications from Apple Health so you don't have to re-enter them."
+        NSHealthUpdateUsageDescription: "TimeShift Meds only reads your medication list from Apple Health to import it; it does not write any information back to Health."
+        NSLocationWhenInUseUsageDescription: "TimeShift Meds uses your location only to confirm timezone changes when you travel. Your location is never stored."
         ITSAppUsesNonExemptEncryption: false
         UIBackgroundModes:
           - fetch
@@ -77,7 +77,7 @@ targets:
     info:
       path: DoseifyWatch/Info.plist
       properties:
-        CFBundleDisplayName: Doseify
+        CFBundleDisplayName: TimeShift Meds
         WKCompanionAppBundleIdentifier: com.strive4it.doseify
         WKApplication: true
         ITSAppUsesNonExemptEncryption: false
@@ -105,7 +105,7 @@ targets:
     info:
       path: DoseifyWatchComplication/Info.plist
       properties:
-        CFBundleDisplayName: Doseify
+        CFBundleDisplayName: TimeShift Meds
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
@@ -126,7 +126,7 @@ targets:
     info:
       path: DoseifyWidgets/Info.plist
       properties:
-        CFBundleDisplayName: DoseifyWidgets
+        CFBundleDisplayName: TimeShift Meds
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 

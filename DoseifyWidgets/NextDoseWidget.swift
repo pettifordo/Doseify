@@ -30,7 +30,7 @@ struct NextDoseWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label("Doseify", systemImage: "pill.fill")
+            Label("TimeShift Meds", systemImage: "pill.fill")
                 .font(.caption2.bold())
                 .foregroundStyle(Color(red: 0.48, green: 0.62, blue: 0.53))
 

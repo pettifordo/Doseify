@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Doseify</string>
+	<string>TimeShift Meds</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,11 +23,11 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Doseify can import your existing medications from Apple Health so you don't have to re-enter them.</string>
+	<string>TimeShift Meds can import your existing medications from Apple Health so you don't have to re-enter them.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Doseify only reads your medication list from Apple Health to import it; it does not write any information back to Health.</string>
+	<string>TimeShift Meds only reads your medication list from Apple Health to import it; it does not write any information back to Health.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Doseify uses your location only to confirm timezone changes when you travel. Your location is never stored.</string>
+	<string>TimeShift Meds uses your location only to confirm timezone changes when you travel. Your location is never stored.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

@@ -76,7 +76,7 @@ extension TripWarning: Identifiable {
         case .dosesSkippedForRealignment(let count):
             return "\(count) dose\(count == 1 ? " is" : "s are") skipped on the flight to keep a safe gap between doses (at most one each way)."
         case .tripTooShortForGradualShift:
-            return "Stay is under 7 days, so Doseify keeps your home schedule. Choose an immediate shift if you'd rather adjust on arrival."
+            return "Stay is under 7 days, so TimeShift Meds keeps your home schedule. Choose an immediate shift if you'd rather adjust on arrival."
         case .bidSpacingViolated:
             return "Some doses fall closer together than the safe minimum and a single skip can't fix it — please review this trip with your doctor."
         }

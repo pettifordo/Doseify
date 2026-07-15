@@ -55,14 +55,14 @@ struct HealthImportView: View {
             ContentUnavailableView {
                 Label("Not available", systemImage: "heart.text.square")
             } description: {
-                Text("Importing medications needs iOS 26 or later, where Apple Health makes your medication list available to apps. Writing doses back to Health isn't offered by Apple, so Doseify stays your record of what you've taken.")
+                Text("Importing medications needs iOS 26 or later, where Apple Health makes your medication list available to apps. Writing doses back to Health isn't offered by Apple, so TimeShift Meds stays your record of what you've taken.")
             }
 
         case .empty:
             ContentUnavailableView {
                 Label("No medications found", systemImage: "pills")
             } description: {
-                Text("Either Apple Health has no medications, or access wasn't granted. You can manage access in Settings ▸ Health ▸ Data Access & Devices ▸ Doseify.")
+                Text("Either Apple Health has no medications, or access wasn't granted. You can manage access in Settings ▸ Health ▸ Data Access & Devices ▸ TimeShift Meds.")
             }
 
         case .list:
@@ -96,7 +96,7 @@ struct HealthImportView: View {
             ContentUnavailableView {
                 Label("Imported", systemImage: "checkmark.circle.fill")
             } description: {
-                Text("Added \(count) medication\(count == 1 ? "" : "s") to Doseify. Open each one to set its schedule and dose.")
+                Text("Added \(count) medication\(count == 1 ? "" : "s") to TimeShift Meds. Open each one to set its schedule and dose.")
             } actions: {
                 Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
             }

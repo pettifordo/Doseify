@@ -12,12 +12,12 @@ struct PrivacyPolicyView: View {
 
                 section(
                     title: "Your data stays on this device",
-                    body: "Doseify stores everything — your medications, dose history, trips, and settings — locally on this iPhone (and your Apple Watch, via direct device-to-device sync). There is no account, no server, and no iCloud sync. Nothing is uploaded anywhere."
+                    body: "TimeShift Meds stores everything — your medications, dose history, trips, and settings — locally on this iPhone (and your Apple Watch, via direct device-to-device sync). There is no account, no server, and no iCloud sync. Nothing is uploaded anywhere."
                 )
 
                 section(
                     title: "No analytics or tracking",
-                    body: "Doseify contains no analytics, telemetry, crash reporting, or third-party SDKs of any kind. Your usage of this app is never measured, recorded, or shared."
+                    body: "TimeShift Meds contains no analytics, telemetry, crash reporting, or third-party SDKs of any kind. Your usage of this app is never measured, recorded, or shared."
                 )
 
                 section(
@@ -27,22 +27,22 @@ struct PrivacyPolicyView: View {
 
                 section(
                     title: "Apple Health",
-                    body: "If you choose to use it, Doseify can import your medication list from the Health app so you don't have to re-enter it. This is read-only and limited to your medications — Doseify does not read any other Health data and does not write anything to Health. You can revoke this permission at any time in iOS Settings → Privacy & Security → Health."
+                    body: "If you choose to use it, TimeShift Meds can import your medication list from the Health app so you don't have to re-enter it. This is read-only and limited to your medications — TimeShift Meds does not read any other Health data and does not write anything to Health. You can revoke this permission at any time in iOS Settings → Privacy & Security → Health."
                 )
 
                 section(
                     title: "Location",
-                    body: "Doseify does not use your location. Timezone changes are detected using your device's system timezone setting only."
+                    body: "TimeShift Meds does not use your location. Timezone changes are detected using your device's system timezone setting only."
                 )
 
                 section(
                     title: "Deleting your data",
-                    body: "Deleting the app removes all of its data immediately and permanently. Because there is no cloud backup, this cannot be undone — Doseify does not retain a copy anywhere."
+                    body: "Deleting the app removes all of its data immediately and permanently. Because there is no cloud backup, this cannot be undone — TimeShift Meds does not retain a copy anywhere."
                 )
 
                 section(
                     title: "Medical disclaimer",
-                    body: "Doseify is a personal organisational tool, not a medical device. Dose timing suggestions — including any timezone or travel adjustments — are indicative only. Always confirm your medication schedule, and any changes to it, with your doctor or pharmacist."
+                    body: "TimeShift Meds is a personal organisational tool, not a medical device. Dose timing suggestions — including any timezone or travel adjustments — are indicative only. Always confirm your medication schedule, and any changes to it, with your doctor or pharmacist."
                 )
 
                 section(

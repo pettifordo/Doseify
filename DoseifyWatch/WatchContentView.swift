@@ -16,7 +16,7 @@ struct WatchContentView: View {
                     }
                 }
             }
-            .navigationTitle("Doseify")
+            .navigationTitle("TimeShift Meds")
         }
     }
 

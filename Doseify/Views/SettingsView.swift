@@ -52,7 +52,7 @@ struct SettingsView: View {
                         } header: {
                             Text("Apple Health")
                         } footer: {
-                            Text("Bring in medications you already track in Health. (Doseify can't write doses back — Apple doesn't offer that — so Doseify stays your record of what you've taken.)")
+                            Text("Bring in medications you already track in Health. (TimeShift Meds can't write doses back — Apple doesn't offer that — so TimeShift Meds stays your record of what you've taken.)")
                         }
 
                         Section("About") {

@@ -391,7 +391,7 @@ struct DoseOverrideSheet: View {
                     } header: {
                         Text("Custom time")
                     } footer: {
-                        Text("Shown in \(cityName(row.tzID)) local time. This overrides Doseify's computed time for this dose only.")
+                        Text("Shown in \(cityName(row.tzID)) local time. This overrides TimeShift Meds's computed time for this dose only.")
                     }
 
                     if existing != nil {
