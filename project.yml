@@ -32,6 +32,8 @@ targets:
     info:
       path: Doseify/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: TimeShift Meds
         NSHealthShareUsageDescription: "TimeShift Meds can import your existing medications from Apple Health so you don't have to re-enter them."
         NSHealthUpdateUsageDescription: "TimeShift Meds only reads your medication list from Apple Health to import it; it does not write any information back to Health."
@@ -77,6 +79,8 @@ targets:
     info:
       path: DoseifyWatch/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: TimeShift Meds
         WKCompanionAppBundleIdentifier: com.strive4it.doseify
         WKApplication: true
@@ -105,6 +109,8 @@ targets:
     info:
       path: DoseifyWatchComplication/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: TimeShift Meds
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
@@ -126,6 +132,8 @@ targets:
     info:
       path: DoseifyWidgets/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: TimeShift Meds
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
